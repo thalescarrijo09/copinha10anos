@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gestor de Campeonatos Escolares</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- Firebase SDKs -->
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js"></script>
+
+  <style>
+    :root{
+      --blue-dark:#002F6C; /* primary */
+      --blue-mid:#005EB8;  /* secondary */
+      --white:#FFFFFF;
+      --green:#78BE20;
+      --yellow:#FFD100;
+      --muted:#6b7280;
+    }
+    body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#f3f4f6; color:#111827; }
+    .sidebar { width:260px; background:var(--blue-dark); color:var(--white); min-height:100vh; padding:20px; }
+    .nav-item { padding:10px 12px; border-radius:8px; cursor:pointer; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+    .nav-item:hover { background:var(--blue-mid); }
+    .btn { padding:10px 14px; border-radius:8px; font-weight:600; cursor:pointer; }
+    .btn-primary { background:var(--blue-dark); color:var(--white); }
+    .btn-primary:hover { background:var(--blue-mid); }
+    .btn-accent { background:var(--green); color:var(--white); }
+    .card { background:#fff; border-radius:12px; padding:18px; box-shadow:0 6px 18px rgba(2,6,23,0.06); }
+    .match-card { border:1px solid #e6e6e6; border-radius:8px; padding:10px; background:#fff; margin-bottom:8px; }
+    .match-winner { background:#ecfdf5; border-color:#bbf7d0; }
+    .label-muted { color:var(--muted); font-size:0.9rem; }
+    .topbar { background:var(--white); padding:12px 18px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e5e7eb; }
+    .logo { height:56px; }
+    .grid-rounds { display:flex; gap:16px; overflow-x:auto; padding-top:12px; }
+    .round { min-width:260px; }
+    .small { font-size:0.85rem; color:#374151; }
+    .input { padding:8px 10px; border-radius:8px; border:1px solid #d1d5db; }
+    .muted-btn { background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; }
+    .link { color:var(--blue-mid); cursor:pointer; text-decoration:underline; }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="loginScreen" class="min-h-screen flex items-center justify-center">
+    <div class="card w-full max-w-md">
+      <div class="flex flex-col items-center gap-3">
+        <!-- PNG transparent recommended. Keep original URL or replace with your transparent image. -->
+        <img src="https://i.imgur.com/k4LX9l8.jpeg" alt="Logo" class="logo" />
+        <h1 class="text-2xl font-bold">Championship Manager</h1>
+        <p class="label-muted text-center">Manage school championships — admin, teachers and visitors.</p>
+      </div>
+
+      <div class="mt-6 space-y-3">
+        <div>
+          <label class="small">Username</label>
+          <input id="usernameInput" class="input w-full mt-1" placeholder="admin or professor name" />
+        </div>
+        <div>
+          <label class="small">Password</label>
+          <input id="passwordInput" type="password" class="input w-full mt-1" placeholder="password" />
+        </div>
+        <div>
+          <label class="small">Profile</label>
+          <select id="profileSelect" class="input w-full mt-1">
+            <option value="admin">Administrator</option>
+            <option value="professor">Teacher</option>
+          </select>
+        </div>
+
+        <div class="flex gap-2 mt-3">
+          <button id="loginBtn" class="btn btn-primary flex-1">Sign In</button>
+          <button id="visitorBtn" class="btn muted-btn flex-1">Continue as Visitor</button>
+        </div>
+
+        <p class="label-muted text-sm mt-2">Demo: use seeded users or create via Admin. (Replace firebaseConfig below with your keys.)</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="mainApp" class="hidden flex">
+    <aside class="sidebar">
+      <div class="flex flex-col items-center mb-6">
+        <img src="https://i.imgur.com/k4LX9l8.jpeg" alt="logo" style="height:72px;"/>
+        <h3 class="mt-2 font-bold text-white text-center">Copa das Escolas</h3>
+      </div>
+
+      <div id="navMenu"></div>
+
+      <div style="margin-top:auto">
+        <button id="logoutBtn" class="btn mut ed-btn" style="width:100%; background:#ef4444; color:white; border-radius:8px; padding:10px;">Logout</button>
+      </div>
+    </aside>
+
+    <main style="flex:1; padding:20px;">
+      <div class="topbar">
+        <div>
+          <h2 id="currentViewTitle" class="text-lg font-semibold">Dashboard</h2>
+          <div id="subtitle" class="label-muted small">Welcome</div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div id="userBadge" class="small label-muted"></div>
+        </div>
+      </div>
+
+      <div id="content" style="margin-top:18px;"></div>
+    </main>
+  </div>
+
+  <!-- ROSTER MODAL (simple) -->
+  <div id="rosterModal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div class="card w-full max-w-lg">
+      <h3 class="font-bold">Assign Numbers - <span id="rosterTeamName"></span></h3>
+      <div id="rosterList" class="mt-3 max-h-64 overflow-y-auto"></div>
+      <div class="mt-4 flex justify-end gap-2">
+        <button id="closeRosterBtn" class="btn muted-btn">Cancel</button>
+        <button id="saveRosterBtn" class="btn btn-accent">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Firebase (replace with your project's config)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+    import {
+      getFirestore, collection, doc, getDocs, setDoc, addDoc,
+      onSnapshot, query, where, updateDoc, getDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+
+    // ---- REPLACE the object below with your Firebase config ----
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY_HERE",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "copinha10anos",
+      storageBucket: "YOUR_BUCKET",
+      messagingSenderId: "YOUR_MSG_ID",
+      appId: "YOUR_APP_ID"
+    };
+    // -----------------------------------------------------------
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // App state
+    let currentUser = null; // {username, profile, schoolIds[]}
+    let users = [];
+    let schools = [];
+    let tournaments = [];
+    let teams = [];
+    let matches = [];
+    let athletes = [];
+
+    // DOM refs
+    const loginScreen = document.getElementById('loginScreen');
+    const mainApp = document.getElementById('mainApp');
+    const navMenu = document.getElementById('navMenu');
+    const contentEl = document.getElementById('content');
+    const userBadge = document.getElementById('userBadge');
+    const rosterModal = document.getElementById('rosterModal');
+    const rosterList = document.getElementById('rosterList');
+    const rosterTeamName = document.getElementById('rosterTeamName');
+
+    // Seed data (from your list)
+    const seed = {
+      schools: [
+        "Escola Municipal Professor Juarez Távora de Carvalho",
+        "Escola Municipal Maria Aparecida de Almeida Paniago",
+        "Escola Municipal Padre Maximino Alvarez Gutierrez",
+        "Escola Municipal Dom Bosco",
+        "Escola Municipal Tonico Corredeira",
+        "Escola Municipal Santo Antônio",
+        "Escola Municipal Reverendo Eudóxio",
+        "Escola Municipal Professor Salviano Neves Amorim",
+        "Escola Municipal Otalecio Alves Irineu",
+        "Escola Municipal Maria Eduarda Condinho Filgueiras",
+        "Escola Municipal Elias Carrijo de Sousa",
+        "Escola Municipal Comecinho de Vida Mirian de Rezende",
+        "Escola Municipal Castelo Branco"
+      ],
+      teachers: [
+        "Cristiane Pereira","Cristiane Alves","Lindonei Junior","Alberto",
+        "Ana Mireile","Daiana","Domingos","Hugo","Lorena",
+        "Poliane Vilela","Ana Paula","Fernando Shoenberger"
+      ],
+      tournaments: [
+        "Fut. Masc Sub11","Fut. Masc Sub09",
+        "QUEIM. Fem Sub11","QUEIM. Masc Sub11","QUEIM. Fem Sub09","Fut. Fem Sub11"
+      ]
+    };
+
+    // --- Helper: populate initial data if collections empty ---
+    async function ensureSeedData() {
+      // Schools
+      const schoolsCol = collection(db, 'schools');
+      const snapSch = await getDocs(schoolsCol);
+      if (snapSch.empty) {
+        for (let i=0;i<seed.schools.length;i++){
+          const id = 's' + (i+1);
+          await setDoc(doc(db, 'schools', id), { name: seed.schools[i] });
+        }
+      }
+
+      // Users (teachers + a default admin)
+      const usersCol = collection(db, 'users');
+      const snapUsers = await getDocs(usersCol);
+      if (snapUsers.empty) {
+        // Admin
+        await setDoc(doc(db, 'users', 'admin'), { username: 'admin', profile: 'admin', password: 'Senha1234', schoolIds: [] });
+        for (let i=0;i<seed.teachers.length;i++){
+          const uid = 'u' + (i+1);
+          await setDoc(doc(db, 'users', uid), { username: seed.teachers[i], profile: 'professor', password: 'Senha1234', schoolIds: [] });
+        }
+      }
+
+      // Tournaments
+      const tournCol = collection(db, 'tournaments');
+      const snapT = await getDocs(tournCol);
+      if (snapT.empty) {
+        for (let i=0;i<seed.tournaments.length;i++){
+          const id = 't' + (i+1);
+          await setDoc(doc(db, 'tournaments', id), { name: seed.tournaments[i] });
+        }
+      }
+    }
+
+    // --- Listeners to keep local state in sync ---
+    function setupListeners() {
+      // users
+      onSnapshot(collection(db, 'users'), snap => {
+        users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      });
+      onSnapshot(collection(db, 'schools'), snap => {
+        schools = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      });
+      onSnapshot(collection(db, 'tournaments'), snap => {
+        tournaments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      });
+      onSnapshot(collection(db, 'teams'), snap => {
+        teams = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      });
+      onSnapshot(collection(db, 'athletes'), snap => {
+        athletes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      });
+      onSnapshot(collection(db, 'matches'), snap => {
+        matches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Refresh bracket view if open
+        const currentTitle = document.getElementById('currentViewTitle')?.textContent;
+        if (currentTitle === 'Tournaments & Results') {
+          renderTournamentsView();
+        }
+      });
+    }
+
+    // --- UI: navigation ---
+    function renderNav() {
+      navMenu.innerHTML = '';
+      const items = [
+        { id: 'dashboard', label: 'Dashboard', roles: ['admin','professor'] },
+        { id: 'tournaments', label: 'Tournaments & Results', roles: ['admin','professor','visitor'] },
+        { id: 'schools', label: 'Schools', roles: ['admin'] },
+        { id: 'teams', label: 'Teams', roles: ['admin'] },
+        { id: 'athletes', label: 'Athletes', roles: ['admin','professor'] },
+        { id: 'professors', label: 'Professors', roles: ['admin'] }
+      ];
+      items.filter(it => it.roles.includes(currentUser.profile)).forEach(it => {
+        const div = document.createElement('div');
+        div.className = 'nav-item';
+        div.textContent = it.label;
+        div.onclick = () => { renderView(it.id); };
+        navMenu.appendChild(div);
+      });
+    }
+
+    function renderView(viewId) {
+      document.getElementById('currentViewTitle').textContent = {
+        'dashboard':'Dashboard',
+        'tournaments':'Tournaments & Results',
+        'schools':'Schools',
+        'teams':'Teams',
+        'athletes':'Athletes',
+        'professors':'Professors'
+      }[viewId] || viewId;
+      if (viewId === 'dashboard') renderDashboard();
+      if (viewId === 'tournaments') renderTournamentsView();
+      if (viewId === 'schools') renderSchoolsView();
+      if (viewId === 'teams') renderTeamsView();
+      if (viewId === 'athletes') renderAthletesView();
+      if (viewId === 'professors') renderProfessorsView();
+    }
+
+    // --- Simple Dashboard ---
+    function renderDashboard() {
+      contentEl.innerHTML = '';
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <h3 class="text-lg font-bold">Welcome, ${currentUser.username}</h3>
+        <p class="label-muted mt-2">Use the left menu to navigate. As admin you can create tournaments, start them and register results. Teachers can manage rosters for their schools.</p>
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="card"><div class="font-bold">${schools.length}</div><div class="label-muted small">Schools</div></div>
+          <div class="card"><div class="font-bold">${teams.length}</div><div class="label-muted small">Teams</div></div>
+          <div class="card"><div class="font-bold">${tournaments.length}</div><div class="label-muted small">Tournaments</div></div>
+        </div>
+      `;
+      contentEl.appendChild(card);
+    }
+
+    // --- Schools view (admin) ---
+    function renderSchoolsView() {
+      contentEl.innerHTML = '';
+      const card = document.createElement('div'); card.className = 'card';
+      card.innerHTML = `<h3 class="font-bold">Schools</h3><div class="label-muted small mt-2">Add / edit schools</div>`;
+      const list = document.createElement('div'); list.className = 'mt-4';
+      schools.forEach(s => {
+        const row = document.createElement('div'); row.className = 'flex justify-between items-center py-2 border-b';
+        row.innerHTML = `<div>${s.name}</div><div><button class="btn muted-btn" onclick="editSchool('${s.id}')">Edit</button></div>`;
+        list.appendChild(row);
+      });
+      card.appendChild(list);
+
+      const addDiv = document.createElement('div'); addDiv.className = 'mt-4';
+      addDiv.innerHTML = `<input id="newSchoolName" class="input w-full" placeholder="New school name" /> <div class="mt-2"><button id="addSchoolBtn" class="btn btn-primary">Add School</button></div>`;
+      card.appendChild(addDiv);
+      contentEl.appendChild(card);
+      document.getElementById('addSchoolBtn').onclick = async () => {
+        const name = document.getElementById('newSchoolName').value.trim();
+        if (!name) return alert('Enter name');
+        const id = 's' + (Date.now());
+        await setDoc(doc(db, 'schools', id), { name });
+        document.getElementById('newSchoolName').value = '';
+      };
+    }
+
+    window.editSchool = async function(id){
+      const s = schools.find(x=>x.id===id);
+      const newName = prompt('New name', s.name);
+      if (newName) {
+        await updateDoc(doc(db,'schools',id), { name: newName });
+      }
+    };
+
+    // --- Teams view (admin) ---
+    function renderTeamsView() {
+      contentEl.innerHTML = '';
+      const card = document.createElement('div'); card.className = 'card';
+      card.innerHTML = `<h3 class="font-bold">Teams</h3><p class="label-muted small mt-2">Teams are linked to a school and a tournament.</p>`;
+      const list = document.createElement('div'); list.className = 'mt-4';
+      teams.forEach(t => {
+        const schoolName = (schools.find(s=>s.id===t.schoolId)?.name) || '—';
+        const tournName = (tournaments.find(tt=>tt.id===t.tournamentId)?.name) || '—';
+        const row = document.createElement('div'); row.className = 'flex justify-between items-center py-2 border-b';
+        row.innerHTML = `<div>${t.name} <div class="small label-muted">${schoolName} — ${tournName}</div></div><div><button class="btn muted-btn" onclick="deleteTeam('${t.id}')">Delete</button></div>`;
+        list.appendChild(row);
+      });
+      card.appendChild(list);
+
+      const addDiv = document.createElement('div'); addDiv.className = 'mt-4';
+      addDiv.innerHTML = `
+        <select id="selectSchool" class="input w-full mb-2"><option value="">Select school</option>${schools.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select>
+        <select id="selectTournament" class="input w-full mb-2"><option value="">Select tournament</option>${tournaments.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}</select>
+        <div class="mt-2"><button id="addTeamBtn" class="btn btn-primary">Create Team for School</button></div>
+      `;
+      card.appendChild(addDiv);
+      contentEl.appendChild(card);
+
+      document.getElementById('addTeamBtn').onclick = async () => {
+        const schoolId = document.getElementById('selectSchool').value;
+        const tournamentId = document.getElementById('selectTournament').value;
+        if (!schoolId || !tournamentId) return alert('select school and tournament');
+        const schoolName = schools.find(s=>s.id===schoolId).name;
+        const tournName = tournaments.find(t=>t.id===tournamentId).name;
+        const tId = 'team_' + Date.now();
+        await setDoc(doc(db,'teams',tId), { name: `${schoolName}`, schoolId, tournamentId });
+      };
+    }
+
+    window.deleteTeam = async function(id) {
+      if (!confirm('Delete team?')) return;
+      // simple deletion (no cleanup of athletes/matches in this simplified version)
+      // to fully remove: delete athletes and references if desired
+      await setDoc(doc(db,'teams',id), { deleted: true }, { merge:true });
+      alert('Team flagged as deleted. (You can implement full delete logic if needed.)');
+    };
+
+    // --- Athletes view (admin/professor) ---
+    function renderAthletesView() {
+      contentEl.innerHTML = '';
+      const card = document.createElement('div'); card.className = 'card';
+      card.innerHTML = `<h3 class="font-bold">Athletes</h3><p class="label-muted small mt-2">Add athletes to teams. Teachers see only their school teams.</p>`;
+      const list = document.createElement('div'); list.className = 'mt-4';
+
+      // determine allowed teams
+      let allowedTeams = teams;
+      if (currentUser.profile === 'professor' && currentUser.schoolIds && currentUser.schoolIds.length>0){
+        allowedTeams = teams.filter(t=> currentUser.schoolIds.includes(t.schoolId));
+      }
+
+      allowedTeams.forEach(t => {
+        const teamAth = athletes.filter(a=>a.teamId===t.id);
+        const div = document.createElement('div'); div.className='card mb-4';
+        div.innerHTML = `<h4 class="font-semibold">${t.name}</h4>
+          <input id="ath-${t.id}" class="input w-full mt-2" placeholder="Athlete name" />
+          <div class="mt-2"><button class="btn btn-primary" onclick="addAthlete('${t.id}')">Add Athlete</button></div>
+          <div class="mt-3">${teamAth.length?teamAth.map(a=>`<div class="py-1 border-b">${a.name}</div>`).join(''):'<div class="label-muted small">No athletes</div>'}</div>`;
+        list.appendChild(div);
+      });
+
+      card.appendChild(list);
+      contentEl.appendChild(card);
+    }
+
+    window.addAthlete = async function(teamId){
+      const input = document.getElementById('ath-'+teamId);
+      const name = input.value.trim();
+      if (!name) return alert('Enter athlete name');
+      const id = 'ath_'+Date.now();
+      await setDoc(doc(db,'athletes',id), { name, teamId });
+      input.value = '';
+    };
+
+    // --- Professors (admin only) ---
+    function renderProfessorsView(){
+      contentEl.innerHTML = '';
+      const card = document.createElement('div'); card.className='card';
+      card.innerHTML = `<h3 class="font-bold">Professors</h3><div class="label-muted small mt-2">Manage teacher accounts and link to schools</div>`;
+      const list = document.createElement('div'); list.className='mt-4';
+      users.filter(u=>u.profile==='professor').forEach(p=>{
+        const row = document.createElement('div'); row.className='flex justify-between items-center py-2 border-b';
+        row.innerHTML = `<div>${p.username}<div class="small label-muted">${(p.schoolIds||[]).map(id=>schools.find(s=>s.id===id)?.name).filter(Boolean).join(', ')}</div></div>
+          <div><button class="btn muted-btn" onclick="linkSchoolToProfessor('${p.id}')">Link schools</button></div>`;
+        list.appendChild(row);
+      });
+      card.appendChild(list);
+      contentEl.appendChild(card);
+    }
+    window.linkSchoolToProfessor = async function(profId){
+      const p = users.find(u=>u.id===profId);
+      const choice = prompt('Enter comma-separated school ids to link (e.g. s1,s2)\nAvailable schools:\n' + schools.map(s=>`${s.id} — ${s.name}`).join('\n'), (p.schoolIds||[]).join(','));
+      if (choice !== null) {
+        const schoolIds = choice.split(',').map(s=>s.trim()).filter(Boolean);
+        await updateDoc(doc(db,'users',profId), { schoolIds });
+      }
+    };
+
+    // --- Tournaments & Bracket view (core) ---
+    async function renderTournamentsView() {
+      contentEl.innerHTML = '';
+      const card = document.createElement('div'); card.className='card';
+      card.innerHTML = `<h3 class="font-bold">Tournaments & Results</h3><p class="label-muted small mt-2">Select a tournament and view the bracket. Admin can start tournament and enter results.</p>`;
+      const sel = document.createElement('select'); sel.className='input mt-3 w-full';
+      sel.innerHTML = `<option value="">Select tournament</option>` + tournaments.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+      card.appendChild(sel);
+
+      const actions = document.createElement('div'); actions.className='mt-3 flex gap-2';
+      const startBtn = document.createElement('button'); startBtn.className='btn btn-accent'; startBtn.textContent = 'Start Tournament';
+      const refreshBtn = document.createElement('button'); refreshBtn.className='btn muted-btn'; refreshBtn.textContent='Refresh Bracket';
+      if (currentUser.profile !== 'admin') startBtn.disabled = true, startBtn.style.opacity=0.5;
+      actions.appendChild(startBtn); actions.appendChild(refreshBtn);
+      card.appendChild(actions);
+
+      const bracketWrap = document.createElement('div'); bracketWrap.className='mt-4';
+      card.appendChild(bracketWrap);
+      contentEl.appendChild(card);
+
+      sel.onchange = () => {
+        const tId = sel.value;
+        renderBracket(tId, bracketWrap);
+      };
+      startBtn.onclick = async () => {
+        const tId = sel.value;
+        if (!tId) return alert('select tournament');
+        // create teams for tournament from schools if none
+        const existingTeams = teams.filter(tt=>tt.tournamentId===tId && !tt.deleted);
+        if (existingTeams.length < 2) {
+          // create team per school for this demo
+          for (let s of schools) {
+            const id = 'team_' + tId + '_' + s.id;
+            await setDoc(doc(db,'teams',id), { name: s.name, schoolId: s.id, tournamentId: tId });
+          }
+        }
+        // now generate bracket
+        await generateDoubleElimBracket(tId);
+        renderBracket(tId, bracketWrap);
+      };
+
+      refreshBtn.onclick = () => {
+        const tId = sel.value;
+        if (tId) renderBracket(tId, bracketWrap);
+      };
+    }
+
+    // Helper: get matches by tournament grouped by bracket & round
+    function getMatchesForTournament(tId) {
+      return matches.filter(m => m.tournamentId === tId && !m.deleted);
+    }
+
+    // Render bracket simplified: group by bracket type then round
+    function renderBracket(tId, container) {
+      container.innerHTML = '';
+      if (!tId) { container.innerHTML = '<div class="label-muted">Select a tournament.</div>'; return; }
+      const t = tournaments.find(tt=>tt.id===tId);
+      const tMatches = getMatchesForTournament(tId);
+      if (tMatches.length === 0) { container.innerHTML = '<div class="label-muted">No matches yet. Admin can Start Tournament.</div>'; return; }
+
+      // group matches by bracket ('W' winner bracket, 'L' loser bracket, 'F' final) and round number
+      const grouped = {};
+      for (const m of tMatches) {
+        grouped[m.bracket] = grouped[m.bracket] || {};
+        grouped[m.bracket][m.round] = grouped[m.bracket][m.round] || [];
+        grouped[m.bracket][m.round].push(m);
+      }
+
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `<h4 class="font-semibold">${t.name}</h4>`;
+      const grid = document.createElement('div');
+      grid.className = 'grid-rounds';
+      // render Winner bracket rounds ascending
+      if (grouped['W']) {
+        Object.keys(grouped['W']).sort((a,b)=>a-b).forEach(roundNum=>{
+          const roundDiv = document.createElement('div'); roundDiv.className='round card';
+          roundDiv.innerHTML = `<h5 class="font-bold">Winners - Round ${roundNum}</h5>`;
+          grouped['W'][roundNum].forEach(m=>{
+            roundDiv.appendChild(renderMatchCard(m));
+          });
+          grid.appendChild(roundDiv);
+        });
+      }
+      // render Loser bracket rounds
+      if (grouped['L']) {
+        Object.keys(grouped['L']).sort((a,b)=>a-b).forEach(roundNum=>{
+          const roundDiv = document.createElement('div'); roundDiv.className='round card';
+          roundDiv.innerHTML = `<h5 class="font-bold">Losers - Round ${roundNum}</h5>`;
+          grouped['L'][roundNum].forEach(m=>{
+            roundDiv.appendChild(renderMatchCard(m));
+          });
+          grid.appendChild(roundDiv);
+        });
+      }
+      // final
+      if (grouped['F']) {
+        const roundDiv = document.createElement('div'); roundDiv.className='round card';
+        roundDiv.innerHTML = `<h5 class="font-bold">Finals</h5>`;
+        grouped['F'][1].forEach(m => roundDiv.appendChild(renderMatchCard(m)));
+        grid.appendChild(roundDiv);
+      }
+
+      wrap.appendChild(grid);
+      container.appendChild(wrap);
+    }
+
+    // Render single match card element
+    function renderMatchCard(m) {
+      const el = document.createElement('div');
+      el.className = 'match-card' + (m.winnerId ? ' match-winner':'');
+      // resolve team names: direct teamId or placeholder WINNER_OF_x etc
+      const team1Label = resolveTeamLabel(m.team1);
+      const team2Label = resolveTeamLabel(m.team2);
+
+      el.innerHTML = `
+        <div class="flex justify-between items-start">
+          <div>
+            <div class="small label-muted">Match ${m.matchNum} — ${m.bracket}${m.round ? ' R'+m.round:''}</div>
+            <div class="mt-2"><strong>${team1Label}</strong> <span class="label-muted small">vs</span> <strong>${team2Label}</strong></div>
+            <div class="mt-2 small label-muted">Score: ${m.score1!==null?m.score1:'-'} x ${m.score2!==null?m.score2:'-'}</div>
+            ${ (m.rosters && Object.keys(m.rosters).length>0) ? `<div class="mt-1 small">Rosters assigned</div>` : '' }
+          </div>
+          <div style="min-width:120px;text-align:right;">
+            ${ currentUser.profile === 'admin' ? `
+              <div><button class="btn muted-btn" onclick="openResultInput('${m.id}')">Enter Result</button></div>
+            ` : '' }
+            ${ canTeacherAssign(m) ? `<div class="mt-2"><button class="btn muted-btn" onclick="openRosterModal('${m.id}','${m.team1}')">Assign Numbers</button></div>` : '' }
+          </div>
+        </div>
+      `;
+      return el;
+    }
+
+    function resolveTeamLabel(teamRef) {
+      if (!teamRef) return '—';
+      if (teamRef.startsWith('WINNER_OF_')) return `Winner of ${teamRef.split('_')[2]}`;
+      if (teamRef.startsWith('LOSER_OF_')) return `Loser of ${teamRef.split('_')[2]}`;
+      // team id -> look up team
+      const t = teams.find(x=>x.id===teamRef);
+      if (t) return t.name;
+      return teamRef;
+    }
+
+    function canTeacherAssign(match) {
+      if (currentUser.profile !== 'professor') return false;
+      // teacher can assign roster if they own team1 OR team2 (team.schoolId within their schoolIds)
+      const t1 = teams.find(tt=>tt.id===match.team1);
+      const t2 = teams.find(tt=>tt.id===match.team2);
+      const sids = currentUser.schoolIds || [];
+      return (t1 && sids.includes(t1.schoolId)) || (t2 && sids.includes(t2.schoolId));
+    }
+
+    // open result input (simple prompt-based)
+    window.openResultInput = async function(matchId) {
+      const m = matches.find(x=>x.id===matchId);
+      if (!m) return alert('match not found');
+      const s1 = prompt('Score team 1 (left):', m.score1===null?'0':String(m.score1));
+      const s2 = prompt('Score team 2 (right):', m.score2===null?'0':String(m.score2));
+      const score1 = parseInt(s1); const score2 = parseInt(s2);
+      if (isNaN(score1) || isNaN(score2)) return alert('Invalid score');
+      // compute winner/loser: when placeholders exist, winner/loser will become actual team ids
+      let winnerId = null, loserId = null;
+      if (score1 > score2) { winnerId = await resolvePlaceholderToTeam(m.team1); loserId = await resolvePlaceholderToTeam(m.team2); }
+      else if (score2 > score1) { winnerId = await resolvePlaceholderToTeam(m.team2); loserId = await resolvePlaceholderToTeam(m.team1); }
+      else return alert('Draw not allowed');
+
+      // update match
+      await updateDoc(doc(db,'matches',matchId), { score1, score2, winnerId, loserId });
+
+      // propagate to matches that reference WINNER_OF_X or LOSER_OF_X
+      await propagateResult(m.matchNum, winnerId, loserId);
+      alert('Result saved and propagated.');
+    };
+
+    // Resolves placeholder 'WINNER_OF_3' -> if match result exists, returns the winnerId, otherwise returns the placeholder unchanged.
+    async function resolvePlaceholderToTeam(ref) {
+      if (!ref) return null;
+      if (!ref.startsWith('WINNER_OF_') && !ref.startsWith('LOSER_OF_')) return ref;
+      const parts = ref.split('_'); const num = parts[2];
+      // find match with matchNum == num
+      const m = matches.find(x=>String(x.matchNum) === String(num));
+      if (!m) return ref; // unresolved yet
+      if (ref.startsWith('WINNER_OF_')) return m.winnerId || ref;
+      return m.loserId || ref;
+    }
+
+    // propagate winner/loser to any matches that referenced them
+    async function propagateResult(matchNum, winnerId, loserId) {
+      // find matches where team1 or team2 equals placeholder 'WINNER_OF_{matchNum}' or 'LOSER_OF_{matchNum}'
+      const placeholderW = 'WINNER_OF_' + matchNum;
+      const placeholderL = 'LOSER_OF_' + matchNum;
+
+      const affected = matches.filter(m => m.team1 === placeholderW || m.team2 === placeholderW || m.team1 === placeholderL || m.team2 === placeholderL);
+      for (const am of affected) {
+        const toUpdate = {};
+        if (am.team1 === placeholderW) toUpdate.team1 = winnerId;
+        if (am.team2 === placeholderW) toUpdate.team2 = winnerId;
+        if (am.team1 === placeholderL) toUpdate.team1 = loserId;
+        if (am.team2 === placeholderL) toUpdate.team2 = loserId;
+        await updateDoc(doc(db,'matches',am.id), toUpdate);
+      }
+    }
+
+    // --- Roster modal ---
+    window.openRosterModal = function(matchId, teamRef) {
+      const m = matches.find(x=>x.id===matchId);
+      rosterList.innerHTML = '';
+      rosterTeamName.textContent = resolveTeamLabel(teamRef);
+      // If teamRef is placeholder, try to resolve to actual team id
+      resolvePlaceholderToTeam(teamRef).then(realTeamId=>{
+        const teamId = realTeamId && realTeamId.startsWith('team_') ? realTeamId : null;
+        if (!teamId) {
+          rosterList.innerHTML = '<div class="label-muted">Team not available yet (winner/loser TBD).</div>';
+          rosterModal.classList.remove('hidden');
+          return;
+        }
+        // list athletes of this team
+        const teamAth = athletes.filter(a=>a.teamId===teamId);
+        // get existing roster info from match
+        const existing = (m.rosters && m.rosters[teamId])?m.rosters[teamId]:[];
+        rosterList.innerHTML = teamAth.map(a=>`<div class="flex items-center justify-between py-1 border-b"><div>${a.name}</div><input data-ath="${a.id}" value="${(existing.find(e=>e.athleteId===a.id)?.number)||''}" class="input w-20 text-center" /></div>`).join('');
+        rosterModal.dataset.matchId = matchId;
+        rosterModal.dataset.teamId = teamId;
+        rosterModal.classList.remove('hidden');
+      });
+    };
+
+    document.getElementById('closeRosterBtn').onclick = ()=> rosterModal.classList.add('hidden');
+    document.getElementById('saveRosterBtn').onclick = async ()=>{
+      const matchId = rosterModal.dataset.matchId;
+      const teamId = rosterModal.dataset.teamId;
+      if (!matchId || !teamId) return;
+      const inputs = rosterList.querySelectorAll('input[data-ath]');
+      const rosterArray = Array.from(inputs).map(inp => ({ athleteId: inp.dataset.ath, number: inp.value?parseInt(inp.value):null })).filter(x=>x.number !== null);
+      // store roster as field rosters.teamId = [ {athleteId, number}, ... ]
+      const path = `rosters.${teamId}`;
+      await updateDoc(doc(db,'matches',matchId), { [path]: rosterArray });
+      rosterModal.classList.add('hidden');
+      alert('Roster saved for match.');
+    };
+
+    // --- Bracket generator (simplified double-elim flow) ---
+    // Strategy:
+    //  - Create Winner bracket rounds (single-elim)
+    //  - For each match, a corresponding LOSER placeholder is created in loser bracket (light version)
+    //  - Final: Winner of winners bracket vs Winner of losers bracket
+    //  - Matches saved to collection 'matches' with fields:
+    //      tournamentId, matchNum, bracket('W'|'L'|'F'), round, team1, team2, score1, score2, winnerId, loserId
+    async function generateDoubleElimBracket(tournamentId) {
+      // gather teams for tournament
+      let tTeams = teams.filter(t=>t.tournamentId === tournamentId && !t.deleted);
+      if (tTeams.length === 0) {
+        // create teams from schools (demo)
+        for (const s of schools) {
+          const tid = 'team_' + tournamentId + '_' + s.id;
+          await setDoc(doc(db,'teams', tid), { name: s.name, schoolId: s.id, tournamentId });
+        }
+        // refresh local teams snapshot by re-reading collection (simple approach)
+        const snapTeams = await getDocs(collection(db,'teams'));
+        tTeams = snapTeams.docs.map(d => ({ id:d.id, ...d.data() })).filter(tt=>tt.tournamentId===tournamentId && !tt.deleted);
+      }
+
+      // remove existing matches for this tournament (soft-delete)
+      const existingMatches = matches.filter(m=>m.tournamentId===tournamentId);
+      for (const m of existingMatches) {
+        await updateDoc(doc(db,'matches',m.id), { deleted:true });
+      }
+
+      // shuffle teams
+      const shuffled = [...tTeams].sort(()=>Math.random()-0.5);
+      const n = shuffled.length;
+      // next power of two
+      const pow2 = 1<<Math.ceil(Math.log2(Math.max(2,n)));
+      const byes = pow2 - n;
+
+      // Build first round pairings (W bracket round 1)
+      const firstRoundTeams = [...shuffled];
+      // add byes as null placeholders
+      for (let i=0;i<byes;i++) firstRoundTeams.push(null);
+
+      const matchesToCreate = [];
+      let matchNum = 1;
+
+      // Winner bracket rounds
+      let roundTeams = firstRoundTeams;
+      let round = 1;
+      while (roundTeams.length >= 2) {
+        for (let i=0;i<roundTeams.length; i+=2){
+          const t1 = roundTeams[i];
+          const t2 = roundTeams[i+1];
+          const team1Ref = t1? t1.id : null;
+          const team2Ref = t2? t2.id : null;
+          const m = {
+            tournamentId,
+            matchNum,
+            bracket:'W',
+            round,
+            team1: team1Ref,
+            team2: team2Ref,
+            score1: null, score2:null,
+            winnerId:null, loserId:null,
+            createdAt: Date.now()
+          };
+          matchesToCreate.push(m);
+          matchNum++;
+        }
+        // prepare next roundTeams as placeholders referencing winners of current round
+        const nextRoundCount = Math.ceil(roundTeams.length / 2);
+        const nextRoundTeams = [];
+        for (let i=0;i<nextRoundCount;i++){
+          const sourceMatchNum = (matchNum - nextRoundCount) + i; // careful: but simpler approach below:
+          // We'll assign as 'WINNER_OF_{x}' by using the matchesToCreate index
+          // calculate the match num of the matches in this round: they are matchesToCreate.slice(- (roundTeams.length/2) )
+        }
+        // to avoid complex index math, we will form the nextRoundTeams as placeholders referencing the matches we just created
+        const createdInThisRound = matchesToCreate.slice(- Math.ceil(roundTeams.length/2));
+        for (const cm of createdInThisRound) {
+          nextRoundTeams.push({ placeholder: 'WINNER_OF_' + cm.matchNum });
+        }
+        roundTeams = nextRoundTeams;
+        round++;
+      }
+
+      // Above loop built winner bracket matches but we used placeholder objects in nextRoundTeams.
+      // Actually matchesToCreate contains all W bracket matches with correct matchNum ordering.
+
+      // Save W bracket matches
+      for (const m of matchesToCreate) {
+        const id = 'm_' + tournamentId + '_' + m.matchNum;
+        await setDoc(doc(db,'matches',id), m);
+      }
+
+      // Now create a simple Loser bracket using losers of first W round:
+      // For each match in first winner round, create a corresponding loser placeholder match in round 1 L bracket
+      const wRound1 = matchesToCreate.filter(mm=>mm.bracket==='W' && mm.round===1);
+      let lMatchNumStart = matchNum;
+      let lRound = 1;
+      const loserMatches = [];
+      for (const wm of wRound1) {
+        const lm = {
+          tournamentId,
+          matchNum: lMatchNumStart,
+          bracket:'L',
+          round: lRound,
+          team1: 'LOSER_OF_' + wm.matchNum,
+          team2: null, // could be filled by other losers in an extended algorithm
+          score1:null, score2:null,
+          winnerId:null, loserId:null,
+          createdAt: Date.now()
+        };
+        loserMatches.push(lm);
+        lMatchNumStart++;
+      }
+      // save loser matches
+      for (const lm of loserMatches) {
+        const id = 'm_' + tournamentId + '_' + lm.matchNum;
+        await setDoc(doc(db,'matches',id), lm);
+      }
+
+      // Final match: winner of top winners bracket vs winner of losers bracket
+      const finalMatch = {
+        tournamentId,
+        matchNum: lMatchNumStart,
+        bracket:'F',
+        round:1,
+        team1: 'WINNER_OF_' + matchesToCreate[matchesToCreate.length-1].matchNum, // winner of last W match
+        team2: 'WINNER_OF_' + loserMatches[loserMatches.length-1].matchNum, // winner of last L match
+        score1:null, score2:null,
+        winnerId:null, loserId:null,
+        createdAt: Date.now()
+      };
+      await setDoc(doc(db,'matches','m_' + tournamentId + '_' + finalMatch.matchNum), finalMatch);
+
+      alert('Bracket created (simplified double-elim). You can now enter results as Admin.');
+    }
+
+    // --- INIT app: seed and listeners + login mechanics simple ---
+    (async function init(){
+      await ensureSeedData();
+      setupListeners();
+
+      // bind login actions
+      document.getElementById('loginBtn').onclick = async ()=>{
+        const username = document.getElementById('usernameInput').value.trim();
+        const password = document.getElementById('passwordInput').value.trim();
+        const profile = document.getElementById('profileSelect').value;
+        if (!username || !password) return alert('enter credentials');
+        // find user in users collection
+        const snap = await getDocs(collection(db,'users'));
+        const allUsers = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        const match = allUsers.find(u=>u.username === username && u.profile === profile && u.password === password);
+        if (!match) return alert('invalid credentials (use seeded users or create as admin)');
+        currentUser = match;
+        // ensure schoolIds array exists
+        currentUser.schoolIds = currentUser.schoolIds || [];
+        launchAppUI();
+      };
+
+      document.getElementById('visitorBtn').onclick = ()=>{
+        currentUser = { username: 'Visitor', profile: 'visitor', schoolIds: [] };
+        launchAppUI();
+      };
+
+      document.getElementById('logoutBtn').onclick = ()=>{
+        currentUser = null;
+        // reset UI
+        mainApp.classList.add('hidden');
+        loginScreen.classList.remove('hidden');
+      };
+    })();
+
+    function launchAppUI() {
+      loginScreen.classList.add('hidden');
+      mainApp.classList.remove('hidden');
+      userBadge.textContent = `${currentUser.username} (${currentUser.profile})`;
+      renderNav();
+      renderView('dashboard');
+    }
+
+    // Keep references to Firestore functions globally used in inline handlers
+    window.openResultInput = window.openResultInput;
+    window.openRosterModal = window.openRosterModal;
+    window.addAthlete = window.addAthlete;
+    window.generateDoubleElimBracket = generateDoubleElimBracket;
+
+    // small utility: when page unloads, detach listeners? (simplified)
+  </script>
+</body>
+</html>
