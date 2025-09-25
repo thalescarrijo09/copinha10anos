@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Competições Escolares Municipais</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Tela de Seleção de Login -->
+    <div id="login-selection" class="page active">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>Sistema de Competições Escolares Municipais</h1>
+                <p>Selecione o tipo de acesso:</p>
+            </div>
+            <div class="login-options">
+                <button class="btn btn--primary btn--lg" onclick="showAdminLogin()">
+                    Acesso Administrador
+                </button>
+                <button class="btn btn--secondary btn--lg" onclick="showProfessorLogin()">
+                    Acesso Professor
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Administrador -->
+    <div id="admin-login" class="page hidden">
+        <div class="login-container">
+            <div class="login-header">
+                <h2>Login Administrador</h2>
+            </div>
+            <form id="admin-login-form" class="login-form">
+                <div class="form-group">
+                    <label class="form-label">Usuário:</label>
+                    <input type="text" id="admin-username" class="form-control" placeholder="Digite seu usuário" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Senha:</label>
+                    <input type="password" id="admin-password" class="form-control" placeholder="Digite sua senha" required>
+                </div>
+                <button type="submit" class="btn btn--primary btn--full-width">Entrar</button>
+                <button type="button" class="btn btn--outline btn--full-width" onclick="showLoginSelection()">Voltar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Login Professor -->
+    <div id="professor-login" class="page hidden">
+        <div class="login-container">
+            <div class="login-header">
+                <h2>Login Professor</h2>
+            </div>
+            <form id="professor-login-form" class="login-form">
+                <div class="form-group">
+                    <label class="form-label">Professor:</label>
+                    <select id="professor-select" class="form-control" required>
+                        <option value="">Selecione seu nome</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Senha:</label>
+                    <input type="password" id="professor-password" class="form-control" placeholder="Digite sua senha" required>
+                </div>
+                <button type="submit" class="btn btn--primary btn--full-width">Entrar</button>
+                <button type="button" class="btn btn--outline btn--full-width" onclick="showLoginSelection()">Voltar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Interface Principal -->
+    <div id="main-interface" class="page hidden">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>Competições Escolares</h3>
+                <div class="user-info">
+                    <span id="current-user-name"></span>
+                    <small id="current-user-type"></small>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <ul id="nav-menu"></ul>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn--outline btn--sm btn--full-width" onclick="logout()">Sair</button>
+            </div>
+        </div>
+
+        <!-- Conteúdo Principal -->
+        <div class="main-content">
+            <header class="main-header">
+                <h1 id="page-title">Dashboard</h1>
+                <button class="mobile-menu-toggle" onclick="toggleSidebar()">☰</button>
+            </header>
+
+            <div class="content-area">
+                <!-- Dashboard Admin -->
+                <div id="admin-dashboard" class="content-section">
+                    <div class="dashboard-stats">
+                        <div class="stat-card">
+                            <h3>Escolas</h3>
+                            <div class="stat-number" id="total-schools">13</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Professores</h3>
+                            <div class="stat-number" id="total-teachers">13</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Torneios</h3>
+                            <div class="stat-number" id="total-tournaments">6</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Times Ativos</h3>
+                            <div class="stat-number" id="total-teams">0</div>
+                        </div>
+                    </div>
+                    <div class="dashboard-actions">
+                        <h3>Ações Rápidas</h3>
+                        <div class="action-buttons">
+                            <button class="btn btn--primary" onclick="showSection('admin-escolas')">Gerenciar Escolas</button>
+                            <button class="btn btn--primary" onclick="showSection('admin-times')">Gerenciar Times</button>
+                            <button class="btn btn--primary" onclick="showSection('admin-torneios')">Criar Torneio</button>
+                            <button class="btn btn--secondary" onclick="showSection('admin-recursos')">Ver Recursos</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Professor -->
+                <div id="professor-dashboard" class="content-section">
+                    <div class="dashboard-stats">
+                        <div class="stat-card">
+                            <h3>Minhas Escolas</h3>
+                            <div class="stat-number" id="my-schools">1</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Meus Times</h3>
+                            <div class="stat-number" id="my-teams">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Torneios Ativos</h3>
+                            <div class="stat-number" id="my-tournaments">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Recursos Enviados</h3>
+                            <div class="stat-number" id="my-resources">0</div>
+                        </div>
+                    </div>
+                    <div class="dashboard-actions">
+                        <h3>Ações Disponíveis</h3>
+                        <div class="action-buttons">
+                            <button class="btn btn--primary" onclick="showSection('professor-times')">Ver Meus Times</button>
+                            <button class="btn btn--primary" onclick="showSection('professor-torneios')">Ver Torneios</button>
+                            <button class="btn btn--secondary" onclick="showSection('professor-recursos')">Enviar Recurso</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gestão de Escolas -->
+                <div id="admin-escolas" class="content-section">
+                    <div class="section-header">
+                        <h2>Gestão de Escolas</h2>
+                        <button class="btn btn--primary" onclick="showModal('add-school-modal')">Adicionar Escola</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome da Escola</th>
+                                    <th>Times</th>
+                                    <th>Professores</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="schools-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Gestão de Times -->
+                <div id="admin-times" class="content-section">
+                    <div class="section-header">
+                        <h2>Gestão de Times</h2>
+                        <button class="btn btn--primary" onclick="showModal('add-team-modal')">Adicionar Time</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome do Time</th>
+                                    <th>Escola</th>
+                                    <th>Modalidade</th>
+                                    <th>Categoria</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teams-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Gestão de Professores -->
+                <div id="admin-professores" class="content-section">
+                    <div class="section-header">
+                        <h2>Gestão de Professores</h2>
+                        <button class="btn btn--primary" onclick="showModal('add-teacher-modal')">Adicionar Professor</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome</th>
+                                    <th>Escola</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teachers-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Gestão de Torneios -->
+                <div id="admin-torneios" class="content-section">
+                    <div class="section-header">
+                        <h2>Gestão de Torneios</h2>
+                        <button class="btn btn--primary" onclick="showModal('create-tournament-modal')">Criar Torneio</button>
+                    </div>
+                    <div id="tournaments-list"></div>
+                </div>
+
+                <!-- Tabelas e Resultados -->
+                <div id="admin-tabelas" class="content-section">
+                    <div class="section-header">
+                        <h2>Tabelas e Resultados</h2>
+                        <select id="tournament-select" class="form-control" onchange="loadTournamentBracket()">
+                            <option value="">Selecione um torneio</option>
+                        </select>
+                    </div>
+                    <div id="tournament-bracket"></div>
+                </div>
+
+                <!-- Recursos Admin -->
+                <div id="admin-recursos" class="content-section">
+                    <div class="section-header">
+                        <h2>Recursos e Solicitações</h2>
+                    </div>
+                    <div id="resources-list"></div>
+                </div>
+
+                <!-- Times Professor -->
+                <div id="professor-times" class="content-section">
+                    <div class="section-header">
+                        <h2>Meus Times</h2>
+                    </div>
+                    <div id="professor-teams-list"></div>
+                </div>
+
+                <!-- Torneios Professor -->
+                <div id="professor-torneios" class="content-section">
+                    <div class="section-header">
+                        <h2>Torneios</h2>
+                    </div>
+                    <div id="professor-tournaments-list"></div>
+                </div>
+
+                <!-- Recursos Professor -->
+                <div id="professor-recursos" class="content-section">
+                    <div class="section-header">
+                        <h2>Enviar Recurso</h2>
+                        <button class="btn btn--primary" onclick="showModal('add-resource-modal')">Novo Recurso</button>
+                    </div>
+                    <div id="professor-resources-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Adicionar Escola -->
+    <div id="add-school-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Adicionar Escola</h3>
+                <button class="modal-close" onclick="hideModal('add-school-modal')">&times;</button>
+            </div>
+            <form id="add-school-form">
+                <div class="form-group">
+                    <label class="form-label">Nome da Escola:</label>
+                    <input type="text" id="school-name" class="form-control" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--outline" onclick="hideModal('add-school-modal')">Cancelar</button>
+                    <button type="submit" class="btn btn--primary">Adicionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Adicionar Time -->
+    <div id="add-team-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Adicionar Time</h3>
+                <button class="modal-close" onclick="hideModal('add-team-modal')">&times;</button>
+            </div>
+            <form id="add-team-form">
+                <div class="form-group">
+                    <label class="form-label">Nome do Time:</label>
+                    <input type="text" id="team-name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Escola:</label>
+                    <select id="team-school" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Modalidade:</label>
+                    <select id="team-modality" class="form-control" required>
+                        <option value="">Selecione</option>
+                        <option value="Futsal Masculino">Futsal Masculino</option>
+                        <option value="Futsal Feminino">Futsal Feminino</option>
+                        <option value="Queimada Masculina">Queimada Masculina</option>
+                        <option value="Queimada Feminina">Queimada Feminina</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Categoria:</label>
+                    <select id="team-category" class="form-control" required>
+                        <option value="">Selecione</option>
+                        <option value="Sub09">Sub09</option>
+                        <option value="Sub11">Sub11</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--outline" onclick="hideModal('add-team-modal')">Cancelar</button>
+                    <button type="submit" class="btn btn--primary">Adicionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Adicionar Professor -->
+    <div id="add-teacher-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Adicionar Professor</h3>
+                <button class="modal-close" onclick="hideModal('add-teacher-modal')">&times;</button>
+            </div>
+            <form id="add-teacher-form">
+                <div class="form-group">
+                    <label class="form-label">Nome do Professor:</label>
+                    <input type="text" id="teacher-name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Escola:</label>
+                    <select id="teacher-school" class="form-control" required></select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--outline" onclick="hideModal('add-teacher-modal')">Cancelar</button>
+                    <button type="submit" class="btn btn--primary">Adicionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Criar Torneio -->
+    <div id="create-tournament-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Criar Torneio</h3>
+                <button class="modal-close" onclick="hideModal('create-tournament-modal')">&times;</button>
+            </div>
+            <form id="create-tournament-form">
+                <div class="form-group">
+                    <label class="form-label">Nome do Torneio:</label>
+                    <select id="tournament-name" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Teams Participantes:</label>
+                    <div id="team-selection"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--outline" onclick="hideModal('create-tournament-modal')">Cancelar</button>
+                    <button type="submit" class="btn btn--primary">Criar Torneio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Adicionar Recurso -->
+    <div id="add-resource-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Enviar Recurso</h3>
+                <button class="modal-close" onclick="hideModal('add-resource-modal')">&times;</button>
+            </div>
+            <form id="add-resource-form">
+                <div class="form-group">
+                    <label class="form-label">Tipo:</label>
+                    <select id="resource-type" class="form-control" required>
+                        <option value="">Selecione</option>
+                        <option value="Erro nos Resultados">Erro nos Resultados</option>
+                        <option value="Problema Técnico">Problema Técnico</option>
+                        <option value="Contestação">Contestação</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Descrição:</label>
+                    <textarea id="resource-description" class="form-control" rows="4" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--outline" onclick="hideModal('add-resource-modal')">Cancelar</button>
+                    <button type="submit" class="btn btn--primary">Enviar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Inserir Resultado -->
+    <div id="match-result-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Inserir Resultado</h3>
+                <button class="modal-close" onclick="hideModal('match-result-modal')">&times;</button>
+            </div>
+            <form id="match-result-form">
+                <div id="match-info"></div>
+                <div class="form-group">
+                    <label class="form-label">Vencedor:</label>
+                    <select id="match-winner" class="form-control" required></select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--outline" onclick="hideModal('match-result-modal')">Cancelar</button>
+                    <button type="submit" class="btn btn--primary">Salvar Resultado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
