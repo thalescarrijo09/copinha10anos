@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Professores</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* (CSS PADRÃO) */
+        :root { --cor-primaria: #00BCD4; --cor-secundaria: #0D47A1; --cor-fundo: #F5F5F5; --cor-texto: #333; --cor-erro: #D32F2F; --cor-acao: #4CAF50; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background-color: var(--cor-fundo); display: flex; }
+        .sidebar { width: 250px; background-color: var(--cor-secundaria); color: white; height: 100vh; padding-top: 20px; position: fixed; overflow-y: auto; }
+        .sidebar h2 { text-align: center; margin-bottom: 30px; padding-bottom: 10px; font-size: 1.4rem; color: white; }
+        .sidebar a { display: flex; align-items: center; padding: 15px 20px; text-decoration: none; color: white; font-size: 1rem; transition: background-color 0.2s; border-left: 5px solid transparent; }
+        .sidebar a i { margin-right: 10px; }
+        .sidebar a:hover, .sidebar a.active { background-color: rgba(255, 255, 255, 0.1); border-left: 5px solid var(--cor-primaria); }
+        .main-content { margin-left: 250px; width: calc(100% - 250px); padding: 30px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header h1 { color: var(--cor-secundaria); font-size: 2rem; }
+        .logout-btn { background-color: var(--cor-erro); color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-weight: bold; }
+        .section { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); margin-bottom: 20px;}
+        .section h2 { color: var(--cor-secundaria); margin-bottom: 15px; font-size: 1.4rem; border-bottom: 1px solid #eee; padding-bottom: 10px;}
+        .btn-acao { background-color: var(--cor-acao); color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-weight: bold; margin-bottom: 20px; display: inline-block; }
+        .tabela-simples { width: 100%; border-collapse: collapse; }
+        .tabela-simples th, .tabela-simples td { padding: 12px 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 0.95rem; }
+        .tabela-simples th { background-color: #f8f8f8; color: var(--cor-texto); font-weight: bold; }
+        @media (max-width: 768px) { .sidebar { width: 100%; height: auto; position: relative; } .sidebar nav { display: flex; flex-wrap: wrap; justify-content: space-around; } .sidebar nav a { padding: 10px 15px; border-left: none; flex: 1 1 40%; justify-content: center; } .main-content { margin-left: 0; width: 100%; padding: 20px; } .header { flex-direction: column; align-items: flex-start; } .header h1 { margin-bottom: 10px; font-size: 1.5rem; } }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>COMPETIÇÕES MUNICIPAIS</h2>
+        <nav>
+            <a href="dashboard_admin.html"><i class="fas fa-home"></i> Dashboard</a>
+            <a href="escolas_admin.html"><i class="fas fa-school"></i> Escolas</a>
+            <a href="times_admin.html"><i class="fas fa-users"></i> Times</a>
+            <a href="professores_admin.html" class="active"><i class="fas fa-chalkboard-teacher"></i> Professores</a>
+            <a href="torneios_admin.html"><i class="fas fa-trophy"></i> Torneios</a>
+            <a href="tabelas_admin.html"><i class="fas fa-list-ol"></i> Tabelas & Resultados</a>
+            <a href="recursos_admin.html"><i class="fas fa-headset"></i> Recursos (3)</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <header class="header">
+            <h1>Gerenciamento de Professores</h1>
+            <a href="index.html" class="logout-btn">Sair <i class="fas fa-sign-out-alt"></i></a>
+        </header>
+
+        <section class="section">
+            <a href="#" class="btn-acao"><i class="fas fa-plus"></i> Cadastrar Novo Professor</a>
+            
+            <h2>Lista de Professores Cadastrados (14)</h2>
+            
+            <table class="tabela-simples">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Escolas Vinculadas</th>
+                        <th>Times em Gestão</th>
+                        <th>Login Ativo</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Cristiane Pereira</td>
+                        <td>EM Dom Bosco, EM Reverendo Eudóxio</td>
+                        <td>3 times (Futsal, Queimada)</td>
+                        <td>Sim</td>
+                        <td><a href="#">Editar</a> | <a href="#">Redefinir Senha</a></td>
+                    </tr>
+                    <tr>
+                        <td>Lindonei Junior</td>
+                        <td>EM Mª Aparecida de Almeida Paniago</td>
+                        <td>2 times</td>
+                        <td>Sim</td>
+                        <td><a href="#">Editar</a> | <a href="#">Redefinir Senha</a></td>
+                    </tr>
+                    <tr>
+                        <td>Alberto</td>
+                        <td>EM Juarez Távora de Carvalho</td>
+                        <td>1 time</td>
+                        <td>Sim</td>
+                        <td><a href="#">Editar</a> | <a href="#">Redefinir Senha</a></td>
+                    </tr>
+                    <tr>
+                        <td>Mariany</td>
+                        <td>EM Padre Maximino Alvarez</td>
+                        <td>0 times</td>
+                        <td>Sim</td>
+                        <td><a href="#">Editar</a> | <a href="#">Redefinir Senha</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+    </div>
+</body>
+</html>

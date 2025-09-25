@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Torneios</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* (CSS PADRÃO) */
+        :root { --cor-primaria: #00BCD4; --cor-secundaria: #0D47A1; --cor-fundo: #F5F5F5; --cor-texto: #333; --cor-erro: #D32F2F; --cor-acao: #4CAF50; --cor-info: #2196F3; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background-color: var(--cor-fundo); display: flex; }
+        .sidebar { width: 250px; background-color: var(--cor-secundaria); color: white; height: 100vh; padding-top: 20px; position: fixed; overflow-y: auto; }
+        .sidebar h2 { text-align: center; margin-bottom: 30px; padding-bottom: 10px; font-size: 1.4rem; color: white; }
+        .sidebar a { display: flex; align-items: center; padding: 15px 20px; text-decoration: none; color: white; font-size: 1rem; transition: background-color 0.2s; border-left: 5px solid transparent; }
+        .sidebar a i { margin-right: 10px; }
+        .sidebar a:hover, .sidebar a.active { background-color: rgba(255, 255, 255, 0.1); border-left: 5px solid var(--cor-primaria); }
+        .main-content { margin-left: 250px; width: calc(100% - 250px); padding: 30px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header h1 { color: var(--cor-secundaria); font-size: 2rem; }
+        .logout-btn { background-color: var(--cor-erro); color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-weight: bold; }
+        .section { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); margin-bottom: 30px; }
+        .section h2 { color: var(--cor-secundaria); margin-bottom: 15px; font-size: 1.4rem; border-bottom: 1px solid #eee; padding-bottom: 10px;}
+        .btn-acao { background-color: var(--cor-acao); color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-weight: bold; margin-bottom: 20px; display: inline-block; }
+        .tabela-simples { width: 100%; border-collapse: collapse; }
+        .tabela-simples th, .tabela-simples td { padding: 12px 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 0.95rem; }
+        .tabela-simples th { background-color: #f8f8f8; color: var(--cor-texto); font-weight: bold; }
+        .status-tag { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
+        .status-ativo { background-color: var(--cor-info); color: white; }
+        .status-concluido { background-color: var(--cor-acao); color: white; }
+        .chave-elim { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .chave-vencedores, .chave-perdedores { background-color: #f9f9f9; padding: 15px; border-radius: 6px; }
+        .chave-vencedores h3, .chave-perdedores h3 { color: var(--cor-secundaria); margin-bottom: 15px; }
+        .partida { background-color: white; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-left: 4px solid var(--cor-primaria); }
+        .partida-titulo { font-weight: bold; color: var(--cor-texto); margin-bottom: 5px; }
+        .time-score { display: flex; justify-content: space-between; font-size: 0.9rem; line-height: 1.6; }
+        .vencedor { font-weight: bold; color: var(--cor-secundaria); }
+        .btn-resultado { background-color: var(--cor-alerta); color: white; padding: 5px 10px; border: none; border-radius: 3px; font-size: 0.8rem; cursor: pointer; float: right; margin-top: -10px; }
+        @media (max-width: 768px) { .chave-elim { grid-template-columns: 1fr; } .main-content { margin-left: 0; width: 100%; padding: 20px; } .sidebar { width: 100%; height: auto; position: relative; } }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>COMPETIÇÕES MUNICIPAIS</h2>
+        <nav>
+            <a href="dashboard_admin.html"><i class="fas fa-home"></i> Dashboard</a>
+            <a href="escolas_admin.html"><i class="fas fa-school"></i> Escolas</a>
+            <a href="times_admin.html"><i class="fas fa-users"></i> Times</a>
+            <a href="professores_admin.html"><i class="fas fa-chalkboard-teacher"></i> Professores</a>
+            <a href="torneios_admin.html" class="active"><i class="fas fa-trophy"></i> Torneios</a>
+            <a href="tabelas_admin.html"><i class="fas fa-list-ol"></i> Tabelas & Resultados</a>
+            <a href="recursos_admin.html"><i class="fas fa-headset"></i> Recursos (3)</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <header class="header">
+            <h1>Gerenciamento de Torneios</h1>
+            <a href="index.html" class="logout-btn">Sair <i class="fas fa-sign-out-alt"></i></a>
+        </header>
+
+        <section class="section">
+            <a href="#" class="btn-acao"><i class="fas fa-plus"></i> Criar Novo Torneio</a>
+            
+            <h2>Torneios Ativos (Chave Dupla Eliminação)</h2>
+            
+            <table class="tabela-simples">
+                <thead>
+                    <tr>
+                        <th>Torneio</th>
+                        <th>Modalidade</th>
+                        <th>Status</th>
+                        <th>Times</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Futsal Masculino - Sub11</td>
+                        <td>Futsal (F.MASC - Sub11)</td>
+                        <td><span class="status-ativo">EM ANDAMENTO</span></td>
+                        <td>8</td>
+                        <td><a href="#chave">Gerenciar Partidas</a> | <a href="#">Finalizar</a></td>
+                    </tr>
+                    <tr>
+                        <td>Queimada Feminina - Sub11</td>
+                        <td>Queimada (Q.FEM - Sub11)</td>
+                        <td><span class="status-ativo">EM ANDAMENTO</span></td>
+                        <td>6</td>
+                        <td><a href="#chave">Gerenciar Partidas</a> | <a href="#">Finalizar</a></td>
+                    </tr>
+                    <tr>
+                        <td>Futsal Feminino - Sub11</td>
+                        <td>Futsal (F.FEM - Sub11)</td>
+                        <td><span class="status-concluido">CONCLUÍDO</span></td>
+                        <td>8</td>
+                        <td><a href="#">Ver Ranking Final</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section" id="chave">
+            <h2>Chave de Dupla Eliminação: Futsal Masculino - Sub11</h2>
+            <p style="color: #ff9800; font-weight: bold; margin-bottom: 20px;">
+                * Edição Manual de Resultados: Clique em 'Inserir Placar' para atualizar.
+            </p>
+
+            <div class="chave-elim">
+                
+                <div class="chave-vencedores">
+                    <h3>Chave dos Vencedores (Winner's Bracket)</h3>
+                    
+                    <div class="partida">
+                        <span class="partida-titulo">Semifinal V1 (Próxima)</span>
+                        <button class="btn-resultado" style="background-color: var(--cor-acao);">Inserir Placar</button>
+                        <div class="time-score">
+                            <span class="vencedor">EM Juarez Távora de Carvalho</span> vs. (Aguardando Vencedor)
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chave-perdedores">
+                    <h3>Chave de Repescagem (Loser's Bracket)</h3>
+                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">Os perdedores aqui são eliminados do torneio.</p>
+                    
+                    <div class="partida">
+                        <span class="partida-titulo">Repescagem R3 (Próxima)</span>
+                        <button class="btn-resultado" style="background-color: var(--cor-acao);">Inserir Placar</button>
+                        <div class="time-score">
+                            (Aguardando Perdedor Jogo 5) vs. <span class="vencedor">EM Elias Carrijo de Sousa</span> 
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </div>
+</body>
+</html>

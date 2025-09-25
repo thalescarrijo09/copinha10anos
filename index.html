@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Gerenciamento de Competições</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Paleta de Cores (Azul Real e Verde-Água) */
+        :root {
+            --cor-primaria: #00BCD4; 
+            --cor-secundaria: #0D47A1; 
+            --cor-fundo: #F5F5F5; 
+            --cor-texto: #333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--cor-fundo);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .login-container {
+            background-color: white;
+            padding: 40px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .login-container h1 {
+            color: var(--cor-secundaria);
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+            text-align: center;
+        }
+
+        .login-container h1 i {
+             color: var(--cor-primaria);
+             margin-right: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--cor-texto);
+            font-weight: bold;
+        }
+
+        .input-group input[type="text"],
+        .input-group input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--cor-primaria);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .login-btn:hover {
+            background-color: #00A9BE;
+        }
+
+        /* Responsividade para telas menores */
+        @media (max-width: 400px) {
+            .login-container {
+                margin: 20px;
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1><i class="fas fa-key"></i> Sistema de Competições</h1>
+        
+        <!-- O id "login-form" é necessário para o JavaScript -->
+        <form id="login-form">
+            <div class="input-group">
+                <label for="user">Usuário (E-mail)</label>
+                <input type="text" id="user" name="user" required>
+            </div>
+            <div class="input-group">
+                <label for="pass">Senha</label>
+                <input type="password" id="pass" name="pass" required>
+            </div>
+            <button type="submit" class="login-btn">ENTRAR</button>
+        </form>
+    </div>
+
+    <!-- Importa a lógica de autenticação do Firebase -->
+    <script type="module" src="auth.js"></script>
+</body>
+</html>

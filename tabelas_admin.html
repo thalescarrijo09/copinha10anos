@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabelas e Resultados</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* (CSS PADRÃO) */
+        :root { --cor-primaria: #00BCD4; --cor-secundaria: #0D47A1; --cor-fundo: #F5F5F5; --cor-texto: #333; --cor-erro: #D32F2F; --cor-acao: #4CAF50; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background-color: var(--cor-fundo); display: flex; }
+        .sidebar { width: 250px; background-color: var(--cor-secundaria); color: white; height: 100vh; padding-top: 20px; position: fixed; overflow-y: auto; }
+        .sidebar h2 { text-align: center; margin-bottom: 30px; padding-bottom: 10px; font-size: 1.4rem; color: white; }
+        .sidebar a { display: flex; align-items: center; padding: 15px 20px; text-decoration: none; color: white; font-size: 1rem; transition: background-color 0.2s; border-left: 5px solid transparent; }
+        .sidebar a i { margin-right: 10px; }
+        .sidebar a:hover, .sidebar a.active { background-color: rgba(255, 255, 255, 0.1); border-left: 5px solid var(--cor-primaria); }
+        .main-content { margin-left: 250px; width: calc(100% - 250px); padding: 30px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header h1 { color: var(--cor-secundaria); font-size: 2rem; }
+        .logout-btn { background-color: var(--cor-erro); color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-weight: bold; }
+        .section { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); margin-bottom: 20px;}
+        .section h2 { color: var(--cor-secundaria); margin-bottom: 15px; font-size: 1.4rem; border-bottom: 1px solid #eee; padding-bottom: 10px;}
+        .form-select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 20px; width: 100%; max-width: 400px; display: block; }
+        .tabela-ranking { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .tabela-ranking th, .tabela-ranking td { padding: 12px 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 0.95rem; }
+        .tabela-ranking th { background-color: var(--cor-secundaria); color: white; font-weight: bold; }
+        .posicao-ouro { background-color: #FFD700; font-weight: bold; color: var(--cor-secundaria); }
+        .posicao-prata { background-color: #C0C0C0; font-weight: bold; }
+        .posicao-bronze { background-color: #CD7F32; font-weight: bold; color: white; }
+        .btn-editar { background-color: var(--cor-primaria); color: white; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer; text-decoration: none; }
+        .alerta-edicao { color: var(--cor-erro); font-weight: bold; margin-top: 10px; display: block; }
+        @media (max-width: 768px) { .sidebar { width: 100%; height: auto; position: relative; } .sidebar nav { display: flex; flex-wrap: wrap; justify-content: space-around; } .sidebar nav a { padding: 10px 15px; border-left: none; flex: 1 1 40%; justify-content: center; } .main-content { margin-left: 0; width: 100%; padding: 20px; } .header { flex-direction: column; align-items: flex-start; } .header h1 { margin-bottom: 10px; font-size: 1.5rem; } }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>COMPETIÇÕES MUNICIPAIS</h2>
+        <nav>
+            <a href="dashboard_admin.html"><i class="fas fa-home"></i> Dashboard</a>
+            <a href="escolas_admin.html"><i class="fas fa-school"></i> Escolas</a>
+            <a href="times_admin.html"><i class="fas fa-users"></i> Times</a>
+            <a href="professores_admin.html"><i class="fas fa-chalkboard-teacher"></i> Professores</a>
+            <a href="torneios_admin.html"><i class="fas fa-trophy"></i> Torneios</a>
+            <a href="tabelas_admin.html" class="active"><i class="fas fa-list-ol"></i> Tabelas & Resultados</a>
+            <a href="recursos_admin.html"><i class="fas fa-headset"></i> Recursos (3)</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <header class="header">
+            <h1>Tabelas e Resultados</h1>
+            <a href="index.html" class="logout-btn">Sair <i class="fas fa-sign-out-alt"></i></a>
+        </header>
+
+        <section class="section">
+            <h2>Seleção de Torneio</h2>
+            <select class="form-select">
+                <option>Futsal Masculino - Sub11 (Em Andamento)</option>
+                <option>Queimada Feminina - Sub11 (Em Andamento)</option>
+                <option>Futsal Feminino - Sub11 (Concluído)</option>
+                <option>Futsal Masculino - Sub09</option>
+            </select>
+        </section>
+
+        <section class="section">
+            <h2>Resultados e Edição (Futsal Masculino - Sub11)</h2>
+            <p>O Administrador pode editar qualquer placar de partidas **já concluídas** ou **pendentes**.</p>
+            <span class="alerta-edicao"><i class="fas fa-exclamation-triangle"></i> ATENÇÃO: A edição de um placar recalcula toda a chave de Dupla Eliminação.</span>
+
+            <table class="tabela-ranking">
+                <thead>
+                    <tr>
+                        <th>Fase</th>
+                        <th>Partida</th>
+                        <th>Placar</th>
+                        <th>Vencedor</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Quartas de Final</td>
+                        <td>EM Távora vs. EM Dom Bosco</td>
+                        <td>3 x 1</td>
+                        <td>EM Távora</td>
+                        <td><button class="btn-editar">Editar Placar</button></td>
+                    </tr>
+                    <tr>
+                        <td>Repescagem R1</td>
+                        <td>EM Paniago vs. EM Eudóxio</td>
+                        <td>1 x 2</td>
+                        <td>EM Eudóxio</td>
+                        <td><button class="btn-editar">Editar Placar</button></td>
+                    </tr>
+                    <tr>
+                        <td>Semifinal V1</td>
+                        <td>EM Távora vs. EM Paniago</td>
+                        <td>PENDENTE</td>
+                        <td>-</td>
+                        <td><button class="btn-editar">Inserir Placar</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        
+        <section class="section">
+            <h2>Ranking Final (Futsal Feminino - Sub11)</h2>
+            <p>Classificação final gerada automaticamente pelo sistema de Dupla Eliminação.</p>
+            
+            <table class="tabela-ranking">
+                <thead>
+                    <tr>
+                        <th>Posição</th>
+                        <th>Time / Escola</th>
+                        <th>Vitórias</th>
+                        <th>Derrotas (Eliminações)</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="posicao-ouro">1º</td>
+                        <td>EM Padre Maximino Alvarez Gutierrez</td>
+                        <td>4</td>
+                        <td>0</td>
+                        <td>Campeão</td>
+                    </tr>
+                    <tr>
+                        <td class="posicao-prata">2º</td>
+                        <td>EM Mª Eduarda Condinho Filgueiras</td>
+                        <td>3</td>
+                        <td>2</td>
+                        <td>Vice-Campeão</td>
+                    </tr>
+                    <tr>
+                        <td class="posicao-bronze">3º</td>
+                        <td>EM Sto. Antônio</td>
+                        <td>4</td>
+                        <td>2</td>
+                        <td>Terceiro Lugar</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+    </div>
+</body>
+</html>
