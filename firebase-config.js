@@ -1,7 +1,7 @@
 // firebase-config.js
 
 // Suas credenciais únicas do projeto no Firebase
-export const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyCVs5lG9cjrI8nsVrqlzCCZNp5vn4DHlkw",
   authDomain: "copinha10anos.firebaseapp.com",
   projectId: "copinha10anos",
