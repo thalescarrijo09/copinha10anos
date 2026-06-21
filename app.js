@@ -88,11 +88,31 @@ function showError(message, error) {
   alert(`❌ ${message}\n${error?.message || ''}`);
 }
 
+/**
+ * Sets loading state on button
+ * @param {HTMLElement} button
+ * @param {boolean} isLoading
+ */
+function setButtonLoading(button, isLoading) {
+  if (!button) return;
+  if (isLoading) {
+    button.disabled = true;
+    button.dataset.originalText = button.textContent;
+    button.textContent = '⏳ Carregando...';
+  } else {
+    button.disabled = false;
+    button.textContent = button.dataset.originalText || 'Salvar';
+  }
+}
+
 const state = {
   currentUser: null, userRole: null,
   schools: [], professors: [], teams: [], tournaments: [],
   currentTournament: null, currentTeam: null,
-  profTeams: [], profTournaments: [], isLoading: false
+  profTeams: [], profTournaments: [], 
+  isLoading: false,
+  inactivityTimer: null,
+  INACTIVITY_TIMEOUT: 15 * 60 * 1000 // 15 minutes
 };
 window.state = state;
 
@@ -192,6 +212,26 @@ const MAPS = {
   }
 };
 
+/**
+ * Reset inactivity timer for auto-logout (#23)
+ */
+function resetInactivityTimer() {
+  if (state.inactivityTimer) clearTimeout(state.inactivityTimer);
+  
+  if (!state.currentUser) return;
+  
+  state.inactivityTimer = setTimeout(async () => {
+    console.warn('Session timeout: user inactive for 15 minutes');
+    alert('Sua sessão expirou por inatividade. Faça login novamente.');
+    await logout();
+  }, state.INACTIVITY_TIMEOUT);
+}
+
+// Setup inactivity listeners
+['mousedown', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+  document.addEventListener(event, resetInactivityTimer, { passive: true });
+});
+
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     try {
@@ -202,6 +242,7 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('userName').textContent = snap.data().name || user.email;
         document.getElementById('loginView').style.display = 'none';
         document.getElementById('appView').style.display = 'flex';
+        resetInactivityTimer();
         if (state.userRole === 'admin') {
           document.getElementById('navAdmin').classList.remove('hidden');
           await init();
@@ -219,6 +260,7 @@ onAuthStateChanged(auth, async (user) => {
     }
   } else {
     state.currentUser = null; state.userRole = null;
+    if (state.inactivityTimer) clearTimeout(state.inactivityTimer);
     document.getElementById('loginView').style.display = 'flex';
     document.getElementById('appView').style.display = 'none';
     document.getElementById('navAdmin').classList.add('hidden');
@@ -293,7 +335,6 @@ function renderSchoolsTable() {
       <td><button class="edit-school-btn" data-school-id="${s.id}">Editar</button>
       <button class="danger delete-school-btn" data-school-id="${s.id}">Excluir</button></td></tr>`).join('');
   
-  // Add event listeners (prevents XSS)
   document.querySelectorAll('.edit-school-btn').forEach(btn => {
     btn.addEventListener('click', () => openSchoolModal(btn.dataset.schoolId));
   });
@@ -353,7 +394,6 @@ function renderProfessorsTable() {
       <td><button class="edit-prof-btn" data-prof-id="${p.id}">Editar</button>
       <button class="danger delete-prof-btn" data-prof-id="${p.id}">Excluir</button></td></tr>`).join('');
   
-  // Add event listeners (prevents XSS)
   document.querySelectorAll('.edit-prof-btn').forEach(btn => {
     btn.addEventListener('click', () => openProfessorModal(btn.dataset.profId));
   });
@@ -449,17 +489,20 @@ function toggleSelectAllSchools() {
 
 async function createBatchTeams() {
   try {
+    const btn = event?.target;
+    setButtonLoading(btn, true);
+    
     const modality = document.getElementById('teamBatchModality').value;
     const category = document.getElementById('teamBatchCategory').value;
     const gender = document.getElementById('teamBatchGender').value;
     
     // Validation (#18) - whitelist validation
-    if (!isValidModality(modality)) { alert('Modalidade inválida.'); return; }
-    if (!isValidCategory(category)) { alert('Categoria inválida.'); return; }
-    if (!isValidGender(gender)) { alert('Gênero inválido.'); return; }
+    if (!isValidModality(modality)) { alert('Modalidade inválida.'); setButtonLoading(btn, false); return; }
+    if (!isValidCategory(category)) { alert('Categoria inválida.'); setButtonLoading(btn, false); return; }
+    if (!isValidGender(gender)) { alert('Gênero inválido.'); setButtonLoading(btn, false); return; }
     
     const checked = document.querySelectorAll('#schoolsChecklist input[type="checkbox"]:checked');
-    if (checked.length === 0) { alert('Selecione pelo menos uma escola.'); return; }
+    if (checked.length === 0) { alert('Selecione pelo menos uma escola.'); setButtonLoading(btn, false); return; }
     
     const batch = writeBatch(db);
     const tournamentId = `${modality}_${category}_${gender}`;
@@ -485,6 +528,8 @@ async function createBatchTeams() {
     await loadTeams(); await loadTournaments(); renderTournamentsList(); renderDashboard();
   } catch (e) {
     showError('Erro ao criar times em lote', e);
+  } finally {
+    setButtonLoading(event?.target, false);
   }
 }
 
@@ -515,7 +560,6 @@ function renderTournamentsList() {
     </div>`;
   }).join('');
   
-  // Add event listeners
   document.querySelectorAll('.open-tournament-detail').forEach(el => {
     el.addEventListener('click', () => openTournamentDetail(el.dataset.tournamentId));
   });
@@ -614,6 +658,9 @@ function openManageTeamsModal(id) {
 
 async function saveTournamentTeams(id) {
   try {
+    const btn = event?.target;
+    setButtonLoading(btn, true);
+    
     const t = state.tournaments.find(x => x.id === id) || state.currentTournament;
     if (!t) return;
     const checked = document.querySelectorAll('#manageTeamsChecklist input[type="checkbox"]:checked');
@@ -621,7 +668,10 @@ async function saveTournamentTeams(id) {
 
     const wasStarted = t.status !== 'pending';
     if (wasStarted) {
-      if (!confirm('Alterar os times irá RESETAR o chaveamento (resultados serão apagados). Continuar?')) return;
+      if (!confirm('Alterar os times irá RESETAR o chaveamento (resultados serão apagados). Continuar?')) {
+        setButtonLoading(btn, false);
+        return;
+      }
     }
 
     const updateData = {
@@ -649,6 +699,8 @@ async function saveTournamentTeams(id) {
     alert('✅ Times do torneio atualizados!');
   } catch (e) {
     showError('Erro ao salvar times do torneio', e);
+  } finally {
+    setButtonLoading(event?.target, false);
   }
 }
 
@@ -783,7 +835,6 @@ function renderBracketDE(tournament, containerId, readOnly) {
 
   container.innerHTML = html;
   
-  // Add event listeners for match modals
   document.querySelectorAll('.open-match-modal-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       openMatchModalDE(btn.dataset.tournamentId, parseInt(btn.dataset.matchId));
@@ -845,6 +896,9 @@ async function shuffleTournamentTeams() {
 
 async function startTournament() {
   try {
+    const btn = event?.target;
+    setButtonLoading(btn, true);
+    
     let tournament = state.currentTournament;
     if (!tournament) return alert('Torneio não carregado.');
     const fresh = await getDoc(doc(db, 'tournaments', tournament.id));
@@ -856,7 +910,10 @@ async function startTournament() {
     const n = teamIds.length;
     if (n < 7 || n > 10) return alert(`Este sistema suporta apenas torneios de 7 a 10 times. Este torneio tem ${n}.`);
 
-    if (!confirm(`Iniciar torneio com ${n} times? Esta ação não pode ser desfeita.`)) return;
+    if (!confirm(`Iniciar torneio com ${n} times? Esta ação não pode ser desfeita.`)) {
+      setButtonLoading(btn, false);
+      return;
+    }
 
     const map = MAPS[n];
     const seedKeys = seedsEmUso(map);
@@ -876,6 +933,8 @@ async function startTournament() {
     openTournamentDetail(tournament.id);
   } catch (e) {
     showError('Erro ao iniciar torneio', e);
+  } finally {
+    setButtonLoading(event?.target, false);
   }
 }
 
@@ -918,6 +977,9 @@ function openMatchModalDE(tournamentId, jogoId) {
 
 async function saveMatchResultDE(tournamentId, jogoId) {
   try {
+    const btn = event?.target;
+    setButtonLoading(btn, true);
+    
     const winnerIdx = document.getElementById('matchWinner').value;
     if (winnerIdx === '') return alert('Selecione o vencedor.');
     const tournament = state.tournaments.find(t => t.id === tournamentId) || state.currentTournament;
@@ -938,6 +1000,8 @@ async function saveMatchResultDE(tournamentId, jogoId) {
     alert('✅ Resultado salvo!');
   } catch (e) {
     showError('Erro ao salvar resultado', e);
+  } finally {
+    setButtonLoading(event?.target, false);
   }
 }
 
@@ -988,6 +1052,9 @@ function openAthletes(teamId) {
   show('profAthletes');
 }
 
+/**
+ * Render athletes table with proper escaping (#16)
+ */
 function renderAthletes() {
   const team = state.currentTeam;
   const tbody = document.getElementById('athletesTable');
@@ -1013,6 +1080,7 @@ async function addAthlete() {
     const name = document.getElementById('athleteName').value.trim();
     const number = document.getElementById('athleteNumber').value;
     if (!name) return alert('Informe o nome do atleta.');
+    if (name.length > 100) return alert('Nome muito longo (máximo 100 caracteres).');
     const team = state.currentTeam;
     if (!team) return;
     const athletes = team.athletes ? [...team.athletes] : [];
@@ -1047,7 +1115,6 @@ async function loadProfTournaments() {
   try {
     const snap = await getDocs(collection(db, 'tournaments'));
     const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    // garante que os times estejam carregados para resolver nomes no chaveamento
     if (state.teams.length === 0) await loadTeams();
     state.profTournaments = all;
     renderProfTournaments();
@@ -1084,7 +1151,6 @@ async function openProfTournamentDetail(id) {
       <span class="badge ${tournament.category}">${CATEGORY_LABELS[tournament.category]}</span>
       <span class="badge ${tournament.gender}">${GENDER_LABELS[tournament.gender]}</span>
       <span class="badge" style="text-transform:capitalize; margin-left:6px;">${statusToLabel(tournament.status)}</span>`;
-    // readOnly = true: professor só visualiza
     renderBracketDE(tournament, 'ptdBracket', true);
     show('profTournament-detail');
   } catch (e) {
