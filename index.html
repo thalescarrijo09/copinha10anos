@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>11ª Copa das Escolas Municipais</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="loginView" class="login-container">
+    <div class="login-box">
+      <h1>🏆 11ª Copa das Escolas Municipais</h1>
+      <p>Chapadão do Sul</p>
+      <input type="email" id="loginEmail" placeholder="E-mail">
+      <input type="password" id="loginPassword" placeholder="Senha">
+      <button onclick="app.login()">Entrar</button>
+      <p id="loginError" style="color: var(--danger); text-align: center; font-size: 0.85rem;"></p>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="appView" class="app-shell">
+    <div class="sidebar">
+      <h2>📋 Menu</h2>
+      <div id="navAdmin" class="hidden">
+        <div class="nav-item" onclick="app.show('dashboard')">Dashboard</div>
+        <div class="nav-item" onclick="app.show('schools')">Escolas</div>
+        <div class="nav-item" onclick="app.show('professors')">Professores</div>
+        <div class="nav-item" onclick="app.show('teams')">Times</div>
+        <div class="nav-item" onclick="app.show('tournaments')">Torneios e Tabelas</div>
+      </div>
+      <div id="navProfessor" class="hidden">
+        <div class="nav-item" onclick="app.show('profTeams')">Meus Times</div>
+        <div class="nav-item" onclick="app.show('profTournaments')">Torneios e Tabelas</div>
+      </div>
+      <div class="nav-item" style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.2); color: #ffcc80;" onclick="app.logout()">
+        Sair (<span id="userName"></span>)
+      </div>
+    </div>
+
+    <div class="main-content">
+
+      <!-- ADMIN DASHBOARD -->
+      <div id="view-dashboard" class="view">
+        <div class="card">
+          <h3>Dashboard Administrativo</h3>
+          <p class="small">Resumo da 11ª Copa</p>
+        </div>
+        <div class="row">
+          <div class="col card"><h3 id="dashSchools">0</h3><p class="small">Escolas cadastradas</p></div>
+          <div class="col card"><h3 id="dashProfessors">0</h3><p class="small">Professores</p></div>
+          <div class="col card"><h3 id="dashTeams">0</h3><p class="small">Times</p></div>
+          <div class="col card"><h3 id="dashTournaments">0</h3><p class="small">Torneios</p></div>
+        </div>
+      </div>
+
+      <!-- ADMIN SCHOOLS -->
+      <div id="view-schools" class="view hidden">
+        <div class="card">
+          <div class="card-header">
+            <h3>Escolas</h3>
+            <button onclick="app.openSchoolModal()">+ Nova Escola</button>
+          </div>
+          <table>
+            <thead><tr><th>Nome</th><th>Ações</th></tr></thead>
+            <tbody id="schoolsTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ADMIN PROFESSORS -->
+      <div id="view-professors" class="view hidden">
+        <div class="card">
+          <div class="card-header">
+            <h3>Professores</h3>
+            <button onclick="app.openProfessorModal()">+ Novo Professor</button>
+          </div>
+          <table>
+            <thead><tr><th>Nome</th><th>E-mail</th><th>Ações</th></tr></thead>
+            <tbody id="professorsTable"></tbody>
+          </table>
+          <p class="small mt">A senha definida aqui será usada para o professor acessar o sistema.</p>
+        </div>
+      </div>
+
+      <!-- ADMIN TIMES -->
+      <div id="view-teams" class="view hidden">
+        <div class="card">
+          <div class="card-header"><h3>Cadastrar Times em Lote</h3></div>
+          <div class="row mb">
+            <div class="col">
+              <label>Modalidade</label>
+              <select id="teamBatchModality">
+                <option value="">Selecione...</option>
+                <option value="futsal">Futsal</option>
+                <option value="queimada">Queimada</option>
+              </select>
+            </div>
+            <div class="col">
+              <label>Categoria</label>
+              <select id="teamBatchCategory">
+                <option value="">Selecione...</option>
+                <option value="sub09">Sub-09</option>
+                <option value="sub11">Sub-11</option>
+              </select>
+            </div>
+            <div class="col">
+              <label>Naipe</label>
+              <select id="teamBatchGender">
+                <option value="">Selecione...</option>
+                <option value="masculino">Masculino</option>
+                <option value="feminino">Feminino</option>
+              </select>
+            </div>
+          </div>
+          <label style="font-weight:600; display:block; margin-bottom:8px;">Escolas participantes</label>
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.9rem; font-weight:500;">
+              <input type="checkbox" id="selectAllSchools" onchange="app.toggleSelectAllSchools()">
+              Selecionar todas
+            </label>
+          </div>
+          <div id="schoolsChecklist" class="schools-checklist">
+            <div class="empty">Carregando escolas...</div>
+          </div>
+          <button onclick="app.createBatchTeams()" style="width:100%; font-size:1.05rem; padding:14px;">Cadastrar Times</button>
+        </div>
+      </div>
+
+      <!-- ADMIN TOURNAMENTS -->
+      <div id="view-tournaments" class="view hidden">
+        <div class="card">
+          <div class="card-header"><h3>Torneios</h3></div>
+          <div id="tournamentsList"></div>
+        </div>
+      </div>
+
+      <!-- ADMIN TOURNAMENT DETAIL -->
+      <div id="view-tournament-detail" class="view hidden">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 id="tdName">Torneio</h3>
+              <p class="small" id="tdInfo"></p>
+            </div>
+            <button onclick="app.show('tournaments')">Voltar</button>
+          </div>
+          <div class="tournament-actions">
+            <button class="secondary" onclick="app.openEditTournamentModal(state.currentTournament.id)">✏️ Editar Nome</button>
+            <button class="secondary" onclick="app.openManageTeamsModal(state.currentTournament.id)">👥 Gerenciar Times</button>
+            <button class="danger" onclick="app.deleteTournament(state.currentTournament.id)">🗑️ Excluir Torneio</button>
+          </div>
+          <div id="tdTeams"></div>
+          <div class="mt">
+            <h4 class="mb">Times Participantes</h4>
+            <div id="tdTeamsList"></div>
+          </div>
+          <div id="tournamentActionButtons" class="tournament-actions hidden">
+            <button class="secondary" onclick="app.shuffleTournamentTeams()">🔀 Embaralhar Ordem</button>
+            <button class="accent" onclick="app.startTournament()">▶ Iniciar Torneio</button>
+          </div>
+          <div class="mt">
+            <h4 class="mb">Chaveamento</h4>
+            <div id="tdBracket"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROFESSOR TEAMS -->
+      <div id="view-profTeams" class="view hidden">
+        <div class="card">
+          <h3>Meus Times</h3>
+          <div id="profTeamsList"></div>
+        </div>
+      </div>
+
+      <!-- PROFESSOR ATHLETES -->
+      <div id="view-profAthletes" class="view hidden">
+        <div class="card">
+          <div class="card-header">
+            <h3 id="athTeamName">Atletas</h3>
+            <button onclick="app.show('profTeams')">Voltar</button>
+          </div>
+          <p class="small mb" id="athTeamInfo"></p>
+          <div class="flex mb" style="gap:10px;">
+            <input type="text" id="athleteName" placeholder="Nome do atleta" style="flex:1;">
+            <input type="number" id="athleteNumber" placeholder="Nº" style="width:80px;">
+            <button onclick="app.addAthlete()">Adicionar</button>
+          </div>
+          <table>
+            <thead><tr><th>Nº</th><th>Nome</th><th>Ações</th></tr></thead>
+            <tbody id="athletesTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PROFESSOR TOURNAMENTS -->
+      <div id="view-profTournaments" class="view hidden">
+        <div class="card">
+          <h3>Torneios e Tabelas</h3>
+          <div id="profTournamentsList"></div>
+        </div>
+      </div>
+
+      <!-- PROFESSOR TOURNAMENT DETAIL -->
+      <div id="view-profTournament-detail" class="view hidden">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 id="ptdName">Torneio</h3>
+              <p class="small" id="ptdInfo"></p>
+            </div>
+            <button onclick="app.show('profTournaments')">Voltar</button>
+          </div>
+          <div id="ptdBracket"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODALS -->
+  <div id="modalOverlay" class="modal-overlay">
+    <div class="modal" id="modalContent"></div>
+  </div>
+
+  <!-- APP SCRIPT -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
