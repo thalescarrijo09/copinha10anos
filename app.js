@@ -17,11 +17,82 @@ const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 const API_KEY = firebaseConfig.apiKey;
 
+// ============================================================
+// VALIDATION HELPERS
+// ============================================================
+
+/**
+ * Validates email format
+ * @param {string} email
+ * @returns {boolean}
+ */
+function isValidEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+}
+
+/**
+ * Escapes HTML special characters to prevent XSS
+ * @param {string} text
+ * @returns {string}
+ */
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+/**
+ * Validates modality against whitelist
+ * @param {string} modality
+ * @returns {boolean}
+ */
+function isValidModality(modality) {
+  return ['futsal', 'queimada'].includes(modality);
+}
+
+/**
+ * Validates category against whitelist
+ * @param {string} category
+ * @returns {boolean}
+ */
+function isValidCategory(category) {
+  return ['sub09', 'sub11'].includes(category);
+}
+
+/**
+ * Validates gender against whitelist
+ * @param {string} gender
+ * @returns {boolean}
+ */
+function isValidGender(gender) {
+  return ['masculino', 'feminino'].includes(gender);
+}
+
+// ============================================================
+// ERROR HANDLING HELPERS
+// ============================================================
+
+/**
+ * Shows error alert to user with console log
+ * @param {string} message
+ * @param {Error} error
+ */
+function showError(message, error) {
+  console.error(message, error);
+  alert(`❌ ${message}\n${error?.message || ''}`);
+}
+
 const state = {
   currentUser: null, userRole: null,
   schools: [], professors: [], teams: [], tournaments: [],
   currentTournament: null, currentTeam: null,
-  profTeams: [], profTournaments: []
+  profTeams: [], profTournaments: [], isLoading: false
 };
 window.state = state;
 
@@ -123,22 +194,27 @@ const MAPS = {
 
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    const snap = await getDoc(doc(db, 'users', user.uid));
-    if (snap.exists()) {
-      state.currentUser = { uid: user.uid, ...snap.data() };
-      state.userRole = snap.data().role;
-      document.getElementById('userName').textContent = snap.data().name || user.email;
-      document.getElementById('loginView').style.display = 'none';
-      document.getElementById('appView').style.display = 'flex';
-      if (state.userRole === 'admin') {
-        document.getElementById('navAdmin').classList.remove('hidden');
-        await init();
+    try {
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      if (snap.exists()) {
+        state.currentUser = { uid: user.uid, ...snap.data() };
+        state.userRole = snap.data().role;
+        document.getElementById('userName').textContent = snap.data().name || user.email;
+        document.getElementById('loginView').style.display = 'none';
+        document.getElementById('appView').style.display = 'flex';
+        if (state.userRole === 'admin') {
+          document.getElementById('navAdmin').classList.remove('hidden');
+          await init();
+        } else {
+          document.getElementById('navProfessor').classList.remove('hidden');
+          show('profTeams');
+        }
       } else {
-        document.getElementById('navProfessor').classList.remove('hidden');
-        show('profTeams');
+        alert('Usuário não cadastrado no sistema.');
+        await signOut(auth);
       }
-    } else {
-      alert('Usuário não cadastrado no sistema.');
+    } catch (e) {
+      showError('Erro ao carregar usuário', e);
       await signOut(auth);
     }
   } else {
@@ -151,10 +227,14 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 async function init() {
-  await loadSchools(); await loadProfessors(); await loadTeams(); await loadTournaments();
-  renderDashboard(); renderSchoolsTable(); renderProfessorsTable();
-  loadSchoolsForChecklist(); renderTournamentsList();
-  show('dashboard');
+  try {
+    await loadSchools(); await loadProfessors(); await loadTeams(); await loadTournaments();
+    renderDashboard(); renderSchoolsTable(); renderProfessorsTable();
+    loadSchoolsForChecklist(); renderTournamentsList();
+    show('dashboard');
+  } catch (e) {
+    showError('Erro ao inicializar aplicação', e);
+  }
 }
 
 function show(viewId) {
@@ -171,11 +251,23 @@ async function login() {
   const email = document.getElementById('loginEmail').value;
   const password = document.getElementById('loginPassword').value;
   document.getElementById('loginError').textContent = '';
-  try { await signInWithEmailAndPassword(auth, email, password); }
-  catch (e) { document.getElementById('loginError').textContent = 'E-mail ou senha inválidos.'; }
+  try { 
+    await signInWithEmailAndPassword(auth, email, password); 
+  }
+  catch (e) { 
+    document.getElementById('loginError').textContent = 'E-mail ou senha inválidos.'; 
+  }
 }
 
-async function logout() { await signOut(auth); state.currentUser = null; state.userRole = null; }
+async function logout() { 
+  try {
+    await signOut(auth); 
+    state.currentUser = null; 
+    state.userRole = null; 
+  } catch (e) {
+    showError('Erro ao fazer logout', e);
+  }
+}
 
 function renderDashboard() {
   document.getElementById('dashSchools').textContent = state.schools.length;
@@ -185,101 +277,159 @@ function renderDashboard() {
 }
 
 async function loadSchools() {
-  const snap = await getDocs(query(collection(db, 'schools'), orderBy('name')));
-  state.schools = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  try {
+    const snap = await getDocs(query(collection(db, 'schools'), orderBy('name')));
+    state.schools = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    showError('Erro ao carregar escolas', e);
+  }
 }
 
 function renderSchoolsTable() {
   const tbody = document.getElementById('schoolsTable');
   if (state.schools.length === 0) { tbody.innerHTML = '<tr><td colspan="2" class="empty">Nenhuma escola cadastrada.</td></tr>'; return; }
   tbody.innerHTML = state.schools.map(s => `
-    <tr><td>${s.name}</td>
-      <td><button onclick="app.openSchoolModal('${s.id}')">Editar</button>
-      <button class="danger" onclick="app.deleteSchool('${s.id}')">Excluir</button></td></tr>`).join('');
+    <tr><td>${escapeHtml(s.name)}</td>
+      <td><button class="edit-school-btn" data-school-id="${s.id}">Editar</button>
+      <button class="danger delete-school-btn" data-school-id="${s.id}">Excluir</button></td></tr>`).join('');
+  
+  // Add event listeners (prevents XSS)
+  document.querySelectorAll('.edit-school-btn').forEach(btn => {
+    btn.addEventListener('click', () => openSchoolModal(btn.dataset.schoolId));
+  });
+  document.querySelectorAll('.delete-school-btn').forEach(btn => {
+    btn.addEventListener('click', () => deleteSchool(btn.dataset.schoolId));
+  });
 }
 
 function openSchoolModal(id) {
   const isEdit = !!id;
   const school = isEdit ? state.schools.find(s => s.id === id) : null;
   openModal(`<div class="modal-header"><h3>${isEdit ? 'Editar' : 'Nova'} Escola</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
-    <input id="schoolName" value="${school ? school.name : ''}" placeholder="Nome da escola">
-    <button onclick="app.saveSchool('${id || ''}')">Salvar</button>`);
+    <input id="schoolName" value="${school ? escapeHtml(school.name) : ''}" placeholder="Nome da escola">
+    <button class="save-school-btn">Salvar</button>`);
+  
+  document.querySelector('.save-school-btn').addEventListener('click', () => saveSchool(id || ''));
 }
 
 async function saveSchool(id) {
-  const name = document.getElementById('schoolName').value.trim();
-  if (!name) return alert('Informe o nome da escola.');
-  const ref = doc(db, 'schools', id || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
-  await setDoc(ref, { name }, { merge: true });
-  closeModal(); await loadSchools(); renderSchoolsTable(); loadSchoolsForChecklist(); renderDashboard();
+  try {
+    const name = document.getElementById('schoolName').value.trim();
+    if (!name) return alert('Informe o nome da escola.');
+    const ref = doc(db, 'schools', id || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
+    await setDoc(ref, { name }, { merge: true });
+    closeModal(); await loadSchools(); renderSchoolsTable(); loadSchoolsForChecklist(); renderDashboard();
+    alert('✅ Escola salva com sucesso!');
+  } catch (e) {
+    showError('Erro ao salvar escola', e);
+  }
 }
 
 async function deleteSchool(id) {
-  if (!confirm('Excluir esta escola?')) return;
-  await deleteDoc(doc(db, 'schools', id));
-  await loadSchools(); renderSchoolsTable(); loadSchoolsForChecklist(); renderDashboard();
+  try {
+    if (!confirm('Tem certeza que deseja excluir esta escola? Esta ação não pode ser desfeita.')) return;
+    await deleteDoc(doc(db, 'schools', id));
+    await loadSchools(); renderSchoolsTable(); loadSchoolsForChecklist(); renderDashboard();
+    alert('✅ Escola excluída com sucesso!');
+  } catch (e) {
+    showError('Erro ao excluir escola', e);
+  }
 }
 
 async function loadProfessors() {
-  const snap = await getDocs(query(collection(db, 'users'), where('role', '==', 'professor')));
-  state.professors = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  try {
+    const snap = await getDocs(query(collection(db, 'users'), where('role', '==', 'professor')));
+    state.professors = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    showError('Erro ao carregar professores', e);
+  }
 }
 
 function renderProfessorsTable() {
   const tbody = document.getElementById('professorsTable');
   if (state.professors.length === 0) { tbody.innerHTML = '<tr><td colspan="3" class="empty">Nenhum professor.</td></tr>'; return; }
   tbody.innerHTML = state.professors.map(p => `
-    <tr><td>${p.name}</td><td>${p.email}</td>
-      <td><button onclick="app.openProfessorModal('${p.id}')">Editar</button>
-      <button class="danger" onclick="app.deleteProfessor('${p.id}')">Excluir</button></td></tr>`).join('');
+    <tr><td>${escapeHtml(p.name)}</td><td>${escapeHtml(p.email)}</td>
+      <td><button class="edit-prof-btn" data-prof-id="${p.id}">Editar</button>
+      <button class="danger delete-prof-btn" data-prof-id="${p.id}">Excluir</button></td></tr>`).join('');
+  
+  // Add event listeners (prevents XSS)
+  document.querySelectorAll('.edit-prof-btn').forEach(btn => {
+    btn.addEventListener('click', () => openProfessorModal(btn.dataset.profId));
+  });
+  document.querySelectorAll('.delete-prof-btn').forEach(btn => {
+    btn.addEventListener('click', () => deleteProfessor(btn.dataset.profId));
+  });
 }
 
 async function saveProfessor(id) {
-  const name = document.getElementById('profName').value.trim();
-  const email = document.getElementById('profEmail').value.trim();
-  const password = document.getElementById('profPassword').value;
-  const schoolId = document.getElementById('profSchool').value;
-  if (!name || !email || !schoolId) return alert('Preencha nome, e-mail e escola.');
-  if (!id) {
-    if (!password) return alert('Defina uma senha para o novo professor.');
-    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, returnSecureToken: false })
-    });
-    const data = await res.json();
-    if (!res.ok) return alert('Erro ao criar usuário: ' + (data.error?.message || 'Erro desconhecido'));
-    id = data.localId;
-    await setDoc(doc(db, 'users', id), { email, name, role: 'professor', schoolId });
-  } else {
-    await updateDoc(doc(db, 'users', id), { name, email, schoolId });
-    if (password) alert('A senha só pode ser redefinida pelo administrador do Firebase ou pelo professor usando "Esqueci minha senha".');
+  try {
+    const name = document.getElementById('profName').value.trim();
+    const email = document.getElementById('profEmail').value.trim();
+    const password = document.getElementById('profPassword').value;
+    const schoolId = document.getElementById('profSchool').value;
+    
+    // Validation (#6)
+    if (!name || !email || !schoolId) return alert('Preencha nome, e-mail e escola.');
+    if (!isValidEmail(email)) return alert('E-mail inválido. Use o formato: usuario@dominio.com');
+    if (name.length > 100) return alert('Nome muito longo (máximo 100 caracteres).');
+    
+    if (!id) {
+      if (!password) return alert('Defina uma senha para o novo professor.');
+      const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, returnSecureToken: false })
+      });
+      const data = await res.json();
+      if (!res.ok) return alert('Erro ao criar usuário: ' + (data.error?.message || 'Erro desconhecido'));
+      id = data.localId;
+      await setDoc(doc(db, 'users', id), { email, name, role: 'professor', schoolId });
+    } else {
+      await updateDoc(doc(db, 'users', id), { name, email, schoolId });
+      if (password) alert('A senha só pode ser redefinida pelo administrador do Firebase ou pelo professor usando "Esqueci minha senha".');
+    }
+    await setDoc(doc(db, 'professors', id), { name, email, schoolId }, { merge: true });
+    closeModal(); await loadProfessors(); renderProfessorsTable(); renderDashboard();
+    alert('✅ Professor salvo com sucesso!');
+  } catch (e) {
+    showError('Erro ao salvar professor', e);
   }
-  await setDoc(doc(db, 'professors', id), { name, email, schoolId }, { merge: true });
-  closeModal(); await loadProfessors(); renderProfessorsTable(); renderDashboard();
 }
 
 function openProfessorModal(id) {
   const isEdit = !!id;
   const prof = isEdit ? state.professors.find(p => p.id === id) : null;
   openModal(`<div class="modal-header"><h3>${isEdit ? 'Editar' : 'Novo'} Professor</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
-    <input id="profName" value="${prof ? prof.name : ''}" placeholder="Nome completo">
-    <input id="profEmail" value="${prof ? prof.email : ''}" placeholder="E-mail">
+    <input id="profName" value="${prof ? escapeHtml(prof.name) : ''}" placeholder="Nome completo">
+    <input id="profEmail" value="${prof ? escapeHtml(prof.email) : ''}" placeholder="E-mail">
     <input id="profPassword" type="password" placeholder="${isEdit ? 'Nova senha (deixe em branco para não alterar)' : 'Senha de acesso'}">
     <select id="profSchool"><option value="">Selecione a escola...</option>
-      ${state.schools.map(s => `<option value="${s.id}" ${prof && prof.schoolId === s.id ? 'selected' : ''}>${s.name}</option>`).join('')}
+      ${state.schools.map(s => `<option value="${s.id}" ${prof && prof.schoolId === s.id ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
     </select>
-    <button onclick="app.saveProfessor('${id || ''}')">Salvar</button>`);
+    <button class="save-prof-btn">Salvar</button>`);
+  
+  document.querySelector('.save-prof-btn').addEventListener('click', () => saveProfessor(id || ''));
 }
 
 async function deleteProfessor(id) {
-  if (!confirm('Excluir professor?')) return;
-  await deleteDoc(doc(db, 'professors', id)); await deleteDoc(doc(db, 'users', id));
-  await loadProfessors(); renderProfessorsTable(); renderDashboard();
+  try {
+    if (!confirm('Tem certeza que deseja excluir este professor? Esta ação não pode ser desfeita.')) return;
+    await deleteDoc(doc(db, 'professors', id)); 
+    await deleteDoc(doc(db, 'users', id));
+    await loadProfessors(); renderProfessorsTable(); renderDashboard();
+    alert('✅ Professor excluído com sucesso!');
+  } catch (e) {
+    showError('Erro ao excluir professor', e);
+  }
 }
 
 async function loadTeams() {
-  const snap = await getDocs(collection(db, 'teams'));
-  state.teams = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  try {
+    const snap = await getDocs(collection(db, 'teams'));
+    state.teams = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    showError('Erro ao carregar times', e);
+  }
 }
 
 function loadSchoolsForChecklist() {
@@ -287,8 +437,8 @@ function loadSchoolsForChecklist() {
   if (state.schools.length === 0) { container.innerHTML = '<div class="empty">Nenhuma escola cadastrada. Cadastre escolas primeiro.</div>'; return; }
   container.innerHTML = state.schools.map(s => `
     <div class="school-check-item">
-      <input type="checkbox" value="${s.id}" id="chk_${s.id}" data-name="${s.name}">
-      <label for="chk_${s.id}">${s.name}</label>
+      <input type="checkbox" value="${s.id}" id="chk_${s.id}" data-name="${escapeHtml(s.name)}">
+      <label for="chk_${s.id}">${escapeHtml(s.name)}</label>
     </div>`).join('');
 }
 
@@ -298,39 +448,53 @@ function toggleSelectAllSchools() {
 }
 
 async function createBatchTeams() {
-  const modality = document.getElementById('teamBatchModality').value;
-  const category = document.getElementById('teamBatchCategory').value;
-  const gender = document.getElementById('teamBatchGender').value;
-  if (!modality || !category || !gender) { alert('Preencha modalidade, categoria e naipe.'); return; }
-  const checked = document.querySelectorAll('#schoolsChecklist input[type="checkbox"]:checked');
-  if (checked.length === 0) { alert('Selecione pelo menos uma escola.'); return; }
-  const batch = writeBatch(db);
-  const tournamentId = `${modality}_${category}_${gender}`;
-  const tournamentRef = doc(db, 'tournaments', tournamentId);
-  const tSnap = await getDoc(tournamentRef);
-  let existingTeamIds = [];
-  if (tSnap.exists()) existingTeamIds = tSnap.data().teamIds || [];
-  const newTeamIds = [];
-  checked.forEach(cb => {
-    const schoolId = cb.value;
-    const school = state.schools.find(s => s.id === schoolId);
-    const schoolName = school ? school.name : 'Escola';
-    const teamName = `${schoolName} - ${MODALITY_LABELS[modality]} ${GENDER_LABELS[gender]} ${CATEGORY_LABELS[category]}`;
-    const teamRef = doc(collection(db, 'teams'));
-    batch.set(teamRef, { name: teamName, schoolId, modality, category, gender, tournamentId, createdAt: new Date().toISOString(), athletes: [] });
-    newTeamIds.push(teamRef.id);
-  });
-  const allTeamIds = [...existingTeamIds, ...newTeamIds];
-  const tournamentName = `${MODALITY_LABELS[modality]} ${GENDER_LABELS[gender]} ${CATEGORY_LABELS[category]}`;
-  batch.set(tournamentRef, { name: tournamentName, modality, category, gender, teamIds: allTeamIds, status: 'pending', createdAt: tSnap.exists() ? tSnap.data().createdAt : new Date().toISOString() }, { merge: true });
-  await batch.commit();
-  alert(`${checked.length} time(s) cadastrado(s)! Torneio "${tournamentName}" atualizado.`);
-  await loadTeams(); await loadTournaments(); renderTournamentsList(); renderDashboard();
+  try {
+    const modality = document.getElementById('teamBatchModality').value;
+    const category = document.getElementById('teamBatchCategory').value;
+    const gender = document.getElementById('teamBatchGender').value;
+    
+    // Validation (#18) - whitelist validation
+    if (!isValidModality(modality)) { alert('Modalidade inválida.'); return; }
+    if (!isValidCategory(category)) { alert('Categoria inválida.'); return; }
+    if (!isValidGender(gender)) { alert('Gênero inválido.'); return; }
+    
+    const checked = document.querySelectorAll('#schoolsChecklist input[type="checkbox"]:checked');
+    if (checked.length === 0) { alert('Selecione pelo menos uma escola.'); return; }
+    
+    const batch = writeBatch(db);
+    const tournamentId = `${modality}_${category}_${gender}`;
+    const tournamentRef = doc(db, 'tournaments', tournamentId);
+    const tSnap = await getDoc(tournamentRef);
+    let existingTeamIds = [];
+    if (tSnap.exists()) existingTeamIds = tSnap.data().teamIds || [];
+    const newTeamIds = [];
+    checked.forEach(cb => {
+      const schoolId = cb.value;
+      const school = state.schools.find(s => s.id === schoolId);
+      const schoolName = school ? school.name : 'Escola';
+      const teamName = `${schoolName} - ${MODALITY_LABELS[modality]} ${GENDER_LABELS[gender]} ${CATEGORY_LABELS[category]}`;
+      const teamRef = doc(collection(db, 'teams'));
+      batch.set(teamRef, { name: teamName, schoolId, modality, category, gender, tournamentId, createdAt: new Date().toISOString(), athletes: [] });
+      newTeamIds.push(teamRef.id);
+    });
+    const allTeamIds = [...existingTeamIds, ...newTeamIds];
+    const tournamentName = `${MODALITY_LABELS[modality]} ${GENDER_LABELS[gender]} ${CATEGORY_LABELS[category]}`;
+    batch.set(tournamentRef, { name: tournamentName, modality, category, gender, teamIds: allTeamIds, status: 'pending', createdAt: tSnap.exists() ? tSnap.data().createdAt : new Date().toISOString() }, { merge: true });
+    await batch.commit();
+    alert(`✅ ${checked.length} time(s) cadastrado(s)! Torneio "${tournamentName}" atualizado.`);
+    await loadTeams(); await loadTournaments(); renderTournamentsList(); renderDashboard();
+  } catch (e) {
+    showError('Erro ao criar times em lote', e);
+  }
 }
 
 async function loadTournaments() {
-  const snap = await getDocs(collection(db, 'tournaments'));
-  state.tournaments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  try {
+    const snap = await getDocs(collection(db, 'tournaments'));
+    state.tournaments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    showError('Erro ao carregar torneios', e);
+  }
 }
 
 function renderTournamentsList() {
@@ -339,17 +503,31 @@ function renderTournamentsList() {
   container.innerHTML = state.tournaments.map(t => {
     const statusLabel = statusToLabel(t.status);
     return `<div class="card tournament-list-card">
-      <div style="cursor:pointer;" onclick="app.openTournamentDetail('${t.id}')">
-        <h4><span class="badge ${t.modality}">${MODALITY_LABELS[t.modality]}</span> ${t.name}</h4>
+      <div style="cursor:pointer;" class="open-tournament-detail" data-tournament-id="${t.id}">
+        <h4><span class="badge ${t.modality}">${MODALITY_LABELS[t.modality]}</span> ${escapeHtml(t.name)}</h4>
         <p class="small">${(t.teamIds || []).length} times · <span class="badge" style="text-transform:capitalize; background:#fff3e0; color:#e65100;">${statusLabel}</span></p>
       </div>
       <div class="tournament-card-actions">
-        <button class="secondary" onclick="event.stopPropagation(); app.openEditTournamentModal('${t.id}')">✏️ Editar</button>
-        <button class="secondary" onclick="event.stopPropagation(); app.openManageTeamsModal('${t.id}')">👥 Times</button>
-        <button class="danger" onclick="event.stopPropagation(); app.deleteTournament('${t.id}')">🗑️ Excluir</button>
+        <button class="secondary edit-tournament-btn" data-tournament-id="${t.id}">✏️ Editar</button>
+        <button class="secondary manage-teams-btn" data-tournament-id="${t.id}">👥 Times</button>
+        <button class="danger delete-tournament-btn" data-tournament-id="${t.id}">🗑️ Excluir</button>
       </div>
     </div>`;
   }).join('');
+  
+  // Add event listeners
+  document.querySelectorAll('.open-tournament-detail').forEach(el => {
+    el.addEventListener('click', () => openTournamentDetail(el.dataset.tournamentId));
+  });
+  document.querySelectorAll('.edit-tournament-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); openEditTournamentModal(btn.dataset.tournamentId); });
+  });
+  document.querySelectorAll('.manage-teams-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); openManageTeamsModal(btn.dataset.tournamentId); });
+  });
+  document.querySelectorAll('.delete-tournament-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); deleteTournament(btn.dataset.tournamentId); });
+  });
 }
 
 function statusToLabel(s) {
@@ -372,24 +550,30 @@ function openEditTournamentModal(id) {
   openModal(`
     <div class="modal-header"><h3>Editar Torneio</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
     <label style="font-weight:600; display:block; margin-bottom:6px;">Nome do torneio</label>
-    <input id="editTournamentName" value="${t.name}" placeholder="Nome do torneio">
-    <button onclick="app.saveTournamentName('${id}')">Salvar</button>`);
+    <input id="editTournamentName" value="${escapeHtml(t.name)}" placeholder="Nome do torneio">
+    <button class="save-tournament-name-btn">Salvar</button>`);
+  
+  document.querySelector('.save-tournament-name-btn').addEventListener('click', () => saveTournamentName(id));
 }
 
 async function saveTournamentName(id) {
-  const name = document.getElementById('editTournamentName').value.trim();
-  if (!name) return alert('Informe o nome do torneio.');
-  await updateDoc(doc(db, 'tournaments', id), { name, updatedAt: new Date().toISOString() });
-  closeModal();
-  await loadTournaments();
-  renderTournamentsList();
-  renderDashboard();
-  if (state.currentTournament && state.currentTournament.id === id) {
-    state.currentTournament.name = name;
-    const tdName = document.getElementById('tdName');
-    if (tdName) tdName.textContent = name;
+  try {
+    const name = document.getElementById('editTournamentName').value.trim();
+    if (!name) return alert('Informe o nome do torneio.');
+    await updateDoc(doc(db, 'tournaments', id), { name, updatedAt: new Date().toISOString() });
+    closeModal();
+    await loadTournaments();
+    renderTournamentsList();
+    renderDashboard();
+    if (state.currentTournament && state.currentTournament.id === id) {
+      state.currentTournament.name = name;
+      const tdName = document.getElementById('tdName');
+      if (tdName) tdName.textContent = escapeHtml(name);
+    }
+    alert('✅ Nome do torneio atualizado!');
+  } catch (e) {
+    showError('Erro ao salvar nome do torneio', e);
   }
-  alert('Nome do torneio atualizado!');
 }
 
 function openManageTeamsModal(id) {
@@ -415,7 +599,7 @@ function openManageTeamsModal(id) {
     : eligibleTeams.map(team => `
       <div class="school-check-item">
         <input type="checkbox" value="${team.id}" id="mng_${team.id}" ${currentTeamIds.includes(team.id) ? 'checked' : ''}>
-        <label for="mng_${team.id}">${team.name}</label>
+        <label for="mng_${team.id}">${escapeHtml(team.name)}</label>
       </div>`).join('');
 
   openModal(`
@@ -423,58 +607,68 @@ function openManageTeamsModal(id) {
     ${warn}
     <p class="small mb">Marque os times que devem participar deste torneio.</p>
     <div class="schools-checklist" id="manageTeamsChecklist">${listHtml}</div>
-    <button onclick="app.saveTournamentTeams('${id}')">Salvar Times</button>`);
+    <button class="save-tournament-teams-btn">Salvar Times</button>`);
+  
+  document.querySelector('.save-tournament-teams-btn').addEventListener('click', () => saveTournamentTeams(id));
 }
 
 async function saveTournamentTeams(id) {
-  const t = state.tournaments.find(x => x.id === id) || state.currentTournament;
-  if (!t) return;
-  const checked = document.querySelectorAll('#manageTeamsChecklist input[type="checkbox"]:checked');
-  const newTeamIds = Array.from(checked).map(c => c.value);
+  try {
+    const t = state.tournaments.find(x => x.id === id) || state.currentTournament;
+    if (!t) return;
+    const checked = document.querySelectorAll('#manageTeamsChecklist input[type="checkbox"]:checked');
+    const newTeamIds = Array.from(checked).map(c => c.value);
 
-  const wasStarted = t.status !== 'pending';
-  if (wasStarted) {
-    if (!confirm('Alterar os times irá RESETAR o chaveamento (resultados serão apagados). Continuar?')) return;
+    const wasStarted = t.status !== 'pending';
+    if (wasStarted) {
+      if (!confirm('Alterar os times irá RESETAR o chaveamento (resultados serão apagados). Continuar?')) return;
+    }
+
+    const updateData = {
+      teamIds: newTeamIds,
+      updatedAt: new Date().toISOString()
+    };
+    if (wasStarted) {
+      updateData.status = 'pending';
+      updateData.seeds = {};
+      updateData.results = {};
+      updateData.bracketSize = null;
+    }
+
+    await updateDoc(doc(db, 'tournaments', id), updateData);
+    closeModal();
+    await loadTournaments();
+    renderTournamentsList();
+    renderDashboard();
+
+    if (state.currentTournament && state.currentTournament.id === id) {
+      const fresh = await getDoc(doc(db, 'tournaments', id));
+      state.currentTournament = { id: fresh.id, ...fresh.data() };
+      renderTournamentDetail(state.currentTournament);
+    }
+    alert('✅ Times do torneio atualizados!');
+  } catch (e) {
+    showError('Erro ao salvar times do torneio', e);
   }
-
-  const updateData = {
-    teamIds: newTeamIds,
-    updatedAt: new Date().toISOString()
-  };
-  if (wasStarted) {
-    updateData.status = 'pending';
-    updateData.seeds = {};
-    updateData.results = {};
-    updateData.bracketSize = null;
-  }
-
-  await updateDoc(doc(db, 'tournaments', id), updateData);
-  closeModal();
-  await loadTournaments();
-  renderTournamentsList();
-  renderDashboard();
-
-  if (state.currentTournament && state.currentTournament.id === id) {
-    const fresh = await getDoc(doc(db, 'tournaments', id));
-    state.currentTournament = { id: fresh.id, ...fresh.data() };
-    renderTournamentDetail(state.currentTournament);
-  }
-  alert('Times do torneio atualizados!');
 }
 
 async function deleteTournament(id) {
-  const t = state.tournaments.find(x => x.id === id) || state.currentTournament;
-  const name = t ? t.name : 'este torneio';
-  if (!confirm(`Excluir o torneio "${name}"?\n\nOs TIMES NÃO serão excluídos, apenas o torneio.`)) return;
-  await deleteDoc(doc(db, 'tournaments', id));
-  await loadTournaments();
-  renderTournamentsList();
-  renderDashboard();
-  if (state.currentTournament && state.currentTournament.id === id) {
-    state.currentTournament = null;
-    show('tournaments');
+  try {
+    const t = state.tournaments.find(x => x.id === id) || state.currentTournament;
+    const name = t ? t.name : 'este torneio';
+    if (!confirm(`Excluir o torneio "${name}"?\n\nOs TIMES NÃO serão excluídos, apenas o torneio.\nEsta ação não pode ser desfeita.`)) return;
+    await deleteDoc(doc(db, 'tournaments', id));
+    await loadTournaments();
+    renderTournamentsList();
+    renderDashboard();
+    if (state.currentTournament && state.currentTournament.id === id) {
+      state.currentTournament = null;
+      show('tournaments');
+    }
+    alert('✅ Torneio excluído!');
+  } catch (e) {
+    showError('Erro ao excluir torneio', e);
   }
-  alert('Torneio excluído!');
 }
 
 // ============================================================
@@ -484,7 +678,7 @@ async function deleteTournament(id) {
 function teamName(id) {
   if (!id) return '<span class="bye">—</span>';
   const t = state.teams.find(x => x.id === id);
-  return t ? t.name : 'Time';
+  return t ? escapeHtml(t.name) : 'Time';
 }
 
 function matchById(map, id) {
@@ -493,6 +687,14 @@ function matchById(map, id) {
   return found;
 }
 
+/**
+ * Resolve slot recursively to determine team and status
+ * @param {Object} map - The bracket map
+ * @param {Object} slot - The slot reference (seed/win/lose)
+ * @param {Object} seeds - Team seeds mapping
+ * @param {Object} results - Match results mapping
+ * @returns {Object} Team info and status
+ */
 function resolveSlot(map, slot, seeds, results) {
   if (slot.seed !== undefined) {
     return { teamId: seeds[slot.seed] || null, decided: true, feedLabel: null };
@@ -540,7 +742,7 @@ function renderMatchCardDE(map, m, seeds, results, readOnly, tournamentId) {
   const actionHtml = winnerIdx !== undefined
     ? '<span class="badge">Finalizado</span>'
     : canEdit
-      ? `<button onclick="app.openMatchModalDE('${tournamentId}', ${m.id})">Resultado</button>`
+      ? `<button class="open-match-modal-btn" data-tournament-id="${tournamentId}" data-match-id="${m.id}">Resultado</button>`
       : '<span class="badge" style="background:#fffde7;">Aguardando</span>';
 
   return `
@@ -580,6 +782,13 @@ function renderBracketDE(tournament, containerId, readOnly) {
   html += '</div></div>';
 
   container.innerHTML = html;
+  
+  // Add event listeners for match modals
+  document.querySelectorAll('.open-match-modal-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openMatchModalDE(btn.dataset.tournamentId, parseInt(btn.dataset.matchId));
+    });
+  });
 }
 
 function seedsEmUso(map) {
@@ -589,17 +798,21 @@ function seedsEmUso(map) {
 }
 
 async function openTournamentDetail(id) {
-  const snap = await getDoc(doc(db, 'tournaments', id));
-  if (!snap.exists()) return;
-  const tournament = { id: snap.id, ...snap.data() };
-  state.currentTournament = tournament;
-  state.tournaments = state.tournaments.map(t => t.id === id ? tournament : t);
-  renderTournamentDetail(tournament);
-  show('tournament-detail');
+  try {
+    const snap = await getDoc(doc(db, 'tournaments', id));
+    if (!snap.exists()) return alert('Torneio não encontrado.');
+    const tournament = { id: snap.id, ...snap.data() };
+    state.currentTournament = tournament;
+    state.tournaments = state.tournaments.map(t => t.id === id ? tournament : t);
+    renderTournamentDetail(tournament);
+    show('tournament-detail');
+  } catch (e) {
+    showError('Erro ao abrir torneio', e);
+  }
 }
 
 function renderTournamentDetail(tournament) {
-  document.getElementById('tdName').textContent = tournament.name;
+  document.getElementById('tdName').textContent = escapeHtml(tournament.name);
   document.getElementById('tdInfo').innerHTML = `
     <span class="badge ${tournament.modality}">${MODALITY_LABELS[tournament.modality]}</span>
     <span class="badge ${tournament.category}">${CATEGORY_LABELS[tournament.category]}</span>
@@ -609,99 +822,123 @@ function renderTournamentDetail(tournament) {
   const teamIds = tournament.teamIds || [];
   teamsList.innerHTML = teamIds.length === 0
     ? '<div class="empty">Nenhum time.</div>'
-    : teamIds.map(tid => { const t = state.teams.find(x => x.id === tid); return `<span class="badge" style="background:#e3f2fd; margin:2px; display:inline-block;">${t ? t.name : tid}</span>`; }).join('');
+    : teamIds.map(tid => { const t = state.teams.find(x => x.id === tid); return `<span class="badge" style="background:#e3f2fd; margin:2px; display:inline-block;">${t ? escapeHtml(t.name) : tid}</span>`; }).join('');
   const actions = document.getElementById('tournamentActionButtons');
   if (tournament.status === 'pending' && state.userRole === 'admin') actions.classList.remove('hidden'); else actions.classList.add('hidden');
   renderBracketDE(tournament, 'tdBracket', state.userRole !== 'admin');
 }
 
 async function shuffleTournamentTeams() {
-  const tournament = state.currentTournament;
-  if (!tournament || tournament.status !== 'pending') return alert('Só pode embaralhar antes de iniciar.');
-  const shuffled = [...tournament.teamIds].sort(() => Math.random() - 0.5);
-  tournament.teamIds = shuffled;
-  await updateDoc(doc(db, 'tournaments', tournament.id), { teamIds: shuffled, updatedAt: new Date().toISOString() });
-  renderTournamentDetail(tournament);
-  alert('Ordem dos times embaralhada!');
+  try {
+    const tournament = state.currentTournament;
+    if (!tournament || tournament.status !== 'pending') return alert('Só pode embaralhar antes de iniciar.');
+    if (!confirm('Tem certeza que deseja embaralhar a ordem dos times?')) return;
+    const shuffled = [...tournament.teamIds].sort(() => Math.random() - 0.5);
+    tournament.teamIds = shuffled;
+    await updateDoc(doc(db, 'tournaments', tournament.id), { teamIds: shuffled, updatedAt: new Date().toISOString() });
+    renderTournamentDetail(tournament);
+    alert('✅ Ordem dos times embaralhada!');
+  } catch (e) {
+    showError('Erro ao embaralhar times', e);
+  }
 }
 
 async function startTournament() {
-  let tournament = state.currentTournament;
-  if (!tournament) return alert('Torneio não carregado.');
-  const fresh = await getDoc(doc(db, 'tournaments', tournament.id));
-  if (!fresh.exists()) return alert('Torneio não encontrado.');
-  tournament = { id: fresh.id, ...fresh.data() };
-  if (tournament.status !== 'pending') return alert('Torneio já iniciado.');
+  try {
+    let tournament = state.currentTournament;
+    if (!tournament) return alert('Torneio não carregado.');
+    const fresh = await getDoc(doc(db, 'tournaments', tournament.id));
+    if (!fresh.exists()) return alert('Torneio não encontrado.');
+    tournament = { id: fresh.id, ...fresh.data() };
+    if (tournament.status !== 'pending') return alert('Torneio já iniciado.');
 
-  const teamIds = tournament.teamIds || [];
-  const n = teamIds.length;
-  if (n < 7 || n > 10) return alert(`Este sistema suporta apenas torneios de 7 a 10 times. Este torneio tem ${n}.`);
+    const teamIds = tournament.teamIds || [];
+    const n = teamIds.length;
+    if (n < 7 || n > 10) return alert(`Este sistema suporta apenas torneios de 7 a 10 times. Este torneio tem ${n}.`);
 
-  const map = MAPS[n];
-  const seedKeys = seedsEmUso(map);
-  const seeds = {};
-  seedKeys.forEach((k, i) => { seeds[k] = teamIds[i] || null; });
+    if (!confirm(`Iniciar torneio com ${n} times? Esta ação não pode ser desfeita.`)) return;
 
-  await updateDoc(doc(db, 'tournaments', tournament.id), {
-    bracketSize: n,
-    seeds,
-    results: {},
-    status: 'active',
-    startedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  });
+    const map = MAPS[n];
+    const seedKeys = seedsEmUso(map);
+    const seeds = {};
+    seedKeys.forEach((k, i) => { seeds[k] = teamIds[i] || null; });
 
-  alert('Torneio iniciado!');
-  openTournamentDetail(tournament.id);
+    await updateDoc(doc(db, 'tournaments', tournament.id), {
+      bracketSize: n,
+      seeds,
+      results: {},
+      status: 'active',
+      startedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    alert('✅ Torneio iniciado!');
+    openTournamentDetail(tournament.id);
+  } catch (e) {
+    showError('Erro ao iniciar torneio', e);
+  }
 }
 
 function openMatchModalDE(tournamentId, jogoId) {
-  const tournament = state.tournaments.find(t => t.id === tournamentId) || state.currentTournament;
-  if (!tournament) return;
-  const map = MAPS[tournament.bracketSize];
-  const m = matchById(map, jogoId);
-  if (!m) return;
-  const a = resolveSlot(map, m.s[0], tournament.seeds, tournament.results || {});
-  const b = resolveSlot(map, m.s[1], tournament.seeds, tournament.results || {});
-  if (!a.decided || !b.decided) return alert('Este jogo ainda não tem os dois times definidos.');
+  try {
+    const tournament = state.tournaments.find(t => t.id === tournamentId) || state.currentTournament;
+    if (!tournament) return;
+    const map = MAPS[tournament.bracketSize];
+    const m = matchById(map, jogoId);
+    if (!m) return;
+    const a = resolveSlot(map, m.s[0], tournament.seeds, tournament.results || {});
+    const b = resolveSlot(map, m.s[1], tournament.seeds, tournament.results || {});
+    if (!a.decided || !b.decided) return alert('Este jogo ainda não tem os dois times definidos.');
 
-  openModal(`
-    <div class="modal-header"><h3>Lançar Resultado — ${m.label}</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
-    <div style="margin-bottom:16px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:20px;">
-        <div style="text-align:center; flex:1;"><div style="font-weight:bold; margin-bottom:8px;">${teamName(a.teamId)}</div><input type="number" id="scoreA" value="0" min="0" style="width:80px; text-align:center; font-size:1.2rem;"></div>
-        <div style="font-weight:bold; color:#777;">vs</div>
-        <div style="text-align:center; flex:1;"><div style="font-weight:bold; margin-bottom:8px;">${teamName(b.teamId)}</div><input type="number" id="scoreB" value="0" min="0" style="width:80px; text-align:center; font-size:1.2rem;"></div>
+    openModal(`
+      <div class="modal-header"><h3>Lançar Resultado — ${m.label}</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
+      <div style="margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:20px;">
+          <div style="text-align:center; flex:1;"><div style="font-weight:bold; margin-bottom:8px;">${teamName(a.teamId)}</div><input type="number" id="scoreA" value="0" min="0" style="width:80px; text-align:center; font-size:1.2rem; padding:6px;">
+          <div style="font-weight:bold; color:#777;">vs</div>
+          <div style="text-align:center; flex:1;"><div style="font-weight:bold; margin-bottom:8px;">${teamName(b.teamId)}</div><input type="number" id="scoreB" value="0" min="0" style="width:80px; text-align:center; font-size:1.2rem; padding:6px;">
+        </div>
       </div>
-    </div>
-    <div style="margin-bottom:16px;">
-      <label style="display:block; margin-bottom:6px; font-weight:600;">Vencedor:</label>
-      <select id="matchWinner"><option value="">Selecione...</option>
-        <option value="0">${teamName(a.teamId)}</option>
-        <option value="1">${teamName(b.teamId)}</option>
-      </select>
-    </div>
-    <button onclick="app.saveMatchResultDE('${tournamentId}', ${jogoId})">Salvar Resultado</button>`);
+      <div style="margin-bottom:16px;">
+        <label style="display:block; margin-bottom:6px; font-weight:600;">Vencedor:</label>
+        <select id="matchWinner"><option value="">Selecione...</option>
+          <option value="0">${teamName(a.teamId)}</option>
+          <option value="1">${teamName(b.teamId)}</option>
+        </select>
+      </div>
+      <button class="save-match-result-btn" data-tournament-id="${tournamentId}" data-match-id="${jogoId}">Salvar Resultado</button>`);
+    
+    document.querySelector('.save-match-result-btn').addEventListener('click', (e) => {
+      saveMatchResultDE(e.target.dataset.tournamentId, parseInt(e.target.dataset.matchId));
+    });
+  } catch (e) {
+    showError('Erro ao abrir modal de resultado', e);
+  }
 }
 
 async function saveMatchResultDE(tournamentId, jogoId) {
-  const winnerIdx = document.getElementById('matchWinner').value;
-  if (winnerIdx === '') return alert('Selecione o vencedor.');
-  const tournament = state.tournaments.find(t => t.id === tournamentId) || state.currentTournament;
-  const results = { ...(tournament.results || {}) };
-  results[jogoId] = parseInt(winnerIdx);
-  tournament.results = results;
+  try {
+    const winnerIdx = document.getElementById('matchWinner').value;
+    if (winnerIdx === '') return alert('Selecione o vencedor.');
+    const tournament = state.tournaments.find(t => t.id === tournamentId) || state.currentTournament;
+    const results = { ...(tournament.results || {}) };
+    results[jogoId] = parseInt(winnerIdx);
+    tournament.results = results;
 
-  const map = MAPS[tournament.bracketSize];
-  const finalGame = matchById(map, MAPS[tournament.bracketSize].winners.flat().find(g => g.label === 'Final').id);
-  const newStatus = results[finalGame.id] !== undefined ? 'finished' : 'active';
+    const map = MAPS[tournament.bracketSize];
+    const finalGame = matchById(map, MAPS[tournament.bracketSize].winners.flat().find(g => g.label === 'Final').id);
+    const newStatus = results[finalGame.id] !== undefined ? 'finished' : 'active';
 
-  await updateDoc(doc(db, 'tournaments', tournamentId), {
-    results, status: newStatus, updatedAt: new Date().toISOString()
-  });
-  tournament.status = newStatus;
-  closeModal();
-  openTournamentDetail(tournamentId);
+    await updateDoc(doc(db, 'tournaments', tournamentId), {
+      results, status: newStatus, updatedAt: new Date().toISOString()
+    });
+    tournament.status = newStatus;
+    closeModal();
+    openTournamentDetail(tournamentId);
+    alert('✅ Resultado salvo!');
+  } catch (e) {
+    showError('Erro ao salvar resultado', e);
+  }
 }
 
 // ============================================================
@@ -709,9 +946,13 @@ async function saveMatchResultDE(tournamentId, jogoId) {
 // ============================================================
 
 async function loadProfTeams() {
-  const snap = await getDocs(query(collection(db, 'teams'), where('schoolId', '==', state.currentUser.schoolId)));
-  state.profTeams = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  renderProfTeams();
+  try {
+    const snap = await getDocs(query(collection(db, 'teams'), where('schoolId', '==', state.currentUser.schoolId)));
+    state.profTeams = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderProfTeams();
+  } catch (e) {
+    showError('Erro ao carregar seus times', e);
+  }
 }
 
 function renderProfTeams() {
@@ -719,8 +960,8 @@ function renderProfTeams() {
   const teams = state.profTeams || [];
   if (teams.length === 0) { container.innerHTML = '<div class="empty">Nenhum time para sua escola.</div>'; return; }
   container.innerHTML = teams.map(t => `
-    <div class="card" style="cursor:pointer;" onclick="app.openAthletes('${t.id}')">
-      <h4>${t.name}</h4>
+    <div class="card open-athletes-card" style="cursor:pointer;" data-team-id="${t.id}">
+      <h4>${escapeHtml(t.name)}</h4>
       <p class="small">
         <span class="badge ${t.modality}">${MODALITY_LABELS[t.modality]}</span>
         <span class="badge ${t.category}">${CATEGORY_LABELS[t.category]}</span>
@@ -728,13 +969,17 @@ function renderProfTeams() {
         · ${(t.athletes || []).length} atletas
       </p>
     </div>`).join('');
+  
+  document.querySelectorAll('.open-athletes-card').forEach(el => {
+    el.addEventListener('click', () => openAthletes(el.dataset.teamId));
+  });
 }
 
 function openAthletes(teamId) {
   const team = state.profTeams.find(t => t.id === teamId);
   if (!team) return;
   state.currentTeam = team;
-  document.getElementById('athTeamName').textContent = team.name;
+  document.getElementById('athTeamName').textContent = escapeHtml(team.name);
   document.getElementById('athTeamInfo').innerHTML = `
     <span class="badge ${team.modality}">${MODALITY_LABELS[team.modality]}</span>
     <span class="badge ${team.category}">${CATEGORY_LABELS[team.category]}</span>
@@ -743,7 +988,6 @@ function openAthletes(teamId) {
   show('profAthletes');
 }
 
-/* === RECONSTRUÍDO === */
 function renderAthletes() {
   const team = state.currentTeam;
   const tbody = document.getElementById('athletesTable');
@@ -755,76 +999,97 @@ function renderAthletes() {
     .map(a => `
       <tr>
         <td>${a.number ?? '-'}</td>
-        <td>${a.name}</td>
-        <td><button class="danger" onclick="app.removeAthlete(${a._idx})">Excluir</button></td>
+        <td>${escapeHtml(a.name)}</td>
+        <td><button class="danger remove-athlete-btn" data-athlete-idx="${a._idx}">Excluir</button></td>
       </tr>`).join('');
+  
+  document.querySelectorAll('.remove-athlete-btn').forEach(btn => {
+    btn.addEventListener('click', () => removeAthlete(parseInt(btn.dataset.athleteIdx)));
+  });
 }
 
-/* === RECONSTRUÍDO === */
 async function addAthlete() {
-  const name = document.getElementById('athleteName').value.trim();
-  const number = document.getElementById('athleteNumber').value;
-  if (!name) return alert('Informe o nome do atleta.');
-  const team = state.currentTeam;
-  if (!team) return;
-  const athletes = team.athletes ? [...team.athletes] : [];
-  athletes.push({ name, number: number ? parseInt(number) : null });
-  await updateDoc(doc(db, 'teams', team.id), { athletes });
-  team.athletes = athletes;
-  document.getElementById('athleteName').value = '';
-  document.getElementById('athleteNumber').value = '';
-  renderAthletes();
+  try {
+    const name = document.getElementById('athleteName').value.trim();
+    const number = document.getElementById('athleteNumber').value;
+    if (!name) return alert('Informe o nome do atleta.');
+    const team = state.currentTeam;
+    if (!team) return;
+    const athletes = team.athletes ? [...team.athletes] : [];
+    athletes.push({ name, number: number ? parseInt(number) : null });
+    await updateDoc(doc(db, 'teams', team.id), { athletes });
+    team.athletes = athletes;
+    document.getElementById('athleteName').value = '';
+    document.getElementById('athleteNumber').value = '';
+    renderAthletes();
+    alert('✅ Atleta adicionado!');
+  } catch (e) {
+    showError('Erro ao adicionar atleta', e);
+  }
 }
 
-/* === RECONSTRUÍDO === */
 async function removeAthlete(idx) {
-  const team = state.currentTeam;
-  if (!team) return;
-  if (!confirm('Remover este atleta?')) return;
-  const athletes = (team.athletes || []).filter((_, i) => i !== idx);
-  await updateDoc(doc(db, 'teams', team.id), { athletes });
-  team.athletes = athletes;
-  renderAthletes();
+  try {
+    const team = state.currentTeam;
+    if (!team) return;
+    if (!confirm('Tem certeza que deseja remover este atleta? Esta ação não pode ser desfeita.')) return;
+    const athletes = (team.athletes || []).filter((_, i) => i !== idx);
+    await updateDoc(doc(db, 'teams', team.id), { athletes });
+    team.athletes = athletes;
+    renderAthletes();
+    alert('✅ Atleta removido!');
+  } catch (e) {
+    showError('Erro ao remover atleta', e);
+  }
 }
 
-/* === RECONSTRUÍDO === */
 async function loadProfTournaments() {
-  const snap = await getDocs(collection(db, 'tournaments'));
-  const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  // garante que os times estejam carregados para resolver nomes no chaveamento
-  if (state.teams.length === 0) await loadTeams();
-  state.profTournaments = all;
-  renderProfTournaments();
+  try {
+    const snap = await getDocs(collection(db, 'tournaments'));
+    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // garante que os times estejam carregados para resolver nomes no chaveamento
+    if (state.teams.length === 0) await loadTeams();
+    state.profTournaments = all;
+    renderProfTournaments();
+  } catch (e) {
+    showError('Erro ao carregar torneios', e);
+  }
 }
 
-/* === RECONSTRUÍDO === */
 function renderProfTournaments() {
   const container = document.getElementById('profTournamentsList');
   const list = state.profTournaments || [];
   if (list.length === 0) { container.innerHTML = '<div class="empty">Nenhum torneio disponível.</div>'; return; }
   container.innerHTML = list.map(t => `
-    <div class="card tournament-list-card" style="cursor:pointer;" onclick="app.openProfTournamentDetail('${t.id}')">
-      <h4><span class="badge ${t.modality}">${MODALITY_LABELS[t.modality]}</span> ${t.name}</h4>
+    <div class="card tournament-list-card open-prof-tournament-detail" style="cursor:pointer;" data-tournament-id="${t.id}">
+      <h4><span class="badge ${t.modality}">${MODALITY_LABELS[t.modality]}</span> ${escapeHtml(t.name)}</h4>
       <p class="small">${(t.teamIds || []).length} times · <span class="badge" style="text-transform:capitalize; background:#fff3e0; color:#e65100;">${statusToLabel(t.status)}</span></p>
     </div>`).join('');
+  
+  document.querySelectorAll('.open-prof-tournament-detail').forEach(el => {
+    el.addEventListener('click', () => openProfTournamentDetail(el.dataset.tournamentId));
+  });
 }
 
-/* === RECONSTRUÍDO === */
 async function openProfTournamentDetail(id) {
-  const snap = await getDoc(doc(db, 'tournaments', id));
-  if (!snap.exists()) return;
-  const tournament = { id: snap.id, ...snap.data() };
-  state.currentTournament = tournament;
-  if (state.teams.length === 0) await loadTeams();
-  document.getElementById('ptdName').textContent = tournament.name;
-  document.getElementById('ptdInfo').innerHTML = `
-    <span class="badge ${tournament.modality}">${MODALITY_LABELS[tournament.modality]}</span>
-    <span class="badge ${tournament.category}">${CATEGORY_LABELS[tournament.category]}</span>
-    <span class="badge ${tournament.gender}">${GENDER_LABELS[tournament.gender]}</span>
-    <span class="badge" style="text-transform:capitalize; margin-left:6px;">${statusToLabel(tournament.status)}</span>`;
-  // readOnly = true: professor só visualiza
-  renderBracketDE(tournament, 'ptdBracket', true);
-  show('profTournament-detail');
+  try {
+    const snap = await getDoc(doc(db, 'tournaments', id));
+    if (!snap.exists()) return alert('Torneio não encontrado.');
+    const tournament = { id: snap.id, ...snap.data() };
+    state.currentTournament = tournament;
+    if (state.teams.length === 0) await loadTeams();
+    document.getElementById('ptdName').textContent = escapeHtml(tournament.name);
+    document.getElementById('ptdInfo').innerHTML = `
+      <span class="badge ${tournament.modality}">${MODALITY_LABELS[tournament.modality]}</span>
+      <span class="badge ${tournament.category}">${CATEGORY_LABELS[tournament.category]}</span>
+      <span class="badge ${tournament.gender}">${GENDER_LABELS[tournament.gender]}</span>
+      <span class="badge" style="text-transform:capitalize; margin-left:6px;">${statusToLabel(tournament.status)}</span>`;
+    // readOnly = true: professor só visualiza
+    renderBracketDE(tournament, 'ptdBracket', true);
+    show('profTournament-detail');
+  } catch (e) {
+    showError('Erro ao abrir torneio', e);
+  }
 }
 
 // ============================================================
