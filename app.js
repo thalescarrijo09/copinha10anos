@@ -786,7 +786,7 @@ async function shuffleTournamentTeams() {
   tournament.teamIds = shuffled;
   await updateDoc(doc(db, 'tournaments', tournament.id), { teamIds: shuffled, updatedAt: new Date().toISOString() });
   renderTournamentDetail(tournament);
-  alert('Ordem das equipas embaralhada!');
+  alert('Ordem das equipes embaralhada!');
 }
 
 async function startTournament() {
@@ -1165,7 +1165,7 @@ function renderProfTournaments() {
   container.innerHTML = list.map(t => `
     <div class="card tournament-list-card" style="cursor:pointer;" onclick="app.openProfTournamentDetail('${t.id}')">
       <h4><span class="badge ${t.modality}">${MODALITY_LABELS[t.modality]}</span> ${t.name}</h4>
-      <p class="small">${(t.teamIds || []).length} equipas · <span class="badge" style="text-transform:capitalize; background:#fff3e0; color:#e65100;">${statusToLabel(t.status)}</span></p>
+      <p class="small">${(t.teamIds || []).length} equipes · <span class="badge" style="text-transform:capitalize; background:#fff3e0; color:#e65100;">${statusToLabel(t.status)}</span></p>
     </div>`).join('');
 }
 
