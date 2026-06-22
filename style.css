@@ -68,18 +68,19 @@ button.secondary { background: #607d8b; color: white; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 30px 20px 20px 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
+  justify-content: center;
+  padding: 30px 20px; /* Espaçamento ajustado */
+  background-color: #ffffff; /* Deixa o quadrado todo branco */
   margin-bottom: 10px;
+  /* Opcional: Adiciona uma leve sombra para separar do verde elegante */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); 
 }
 
 .sidebar-logo {
-  width: 120px; /* Você pode aumentar ou diminuir esse valor para ajustar o tamanho da logo */
+  width: 160px; /* Tamanho da logo (ajuste se quiser maior ou menor) */
   height: auto;
   object-fit: contain;
-  margin-bottom: 15px;
-  /* Opcional: adiciona uma sombra que acompanha o contorno do círculo da imagem */
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)); 
+  margin-bottom: 0; /* Tiramos a margem inferior pois não há mais texto embaixo */
 }
 
 .sidebar h2 { font-size: 1.1rem; text-align: center; margin: 0; }
