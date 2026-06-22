@@ -475,7 +475,7 @@ async function deleteTournament(id) {
 }
 
 // ============================================================
-// CHAVEAMENTO DUPLA ELIMINAÇÃO (ATUALIZADO COM PLACAR)
+// CHAVEAMENTO DUPLA ELIMINAÇÃO
 // ============================================================
 
 function teamName(id) {
@@ -496,7 +496,7 @@ function resolveSlot(map, slot, seeds, results) {
     const r = results[slot.win];
     if (r !== undefined) {
       const m = matchById(map, slot.win);
-      const wIdx = typeof r === 'object' ? r.winner : r; // Compatibilidade com bd antigo
+      const wIdx = typeof r === 'object' ? r.winner : r; 
       return resolveSlot(map, m.s[wIdx], seeds, results);
     }
     return { teamId: null, decided: false, feedLabel: 'Venc. Jogo ' + slot.win };
@@ -521,7 +521,6 @@ function renderMatchCardDE(map, m, seeds, results, readOnly, tournamentId) {
   const resultData = results[m.id];
   const winnerIdx = resultData !== undefined ? (typeof resultData === 'object' ? resultData.winner : resultData) : undefined;
   
-  // Trata dados antigos (se não for objeto, exibe um check) e os novos (mostra o placar)
   const scoreA = resultData !== undefined && typeof resultData === 'object' ? resultData.scoreA : (winnerIdx === 0 ? '✓' : '-');
   const scoreB = resultData !== undefined && typeof resultData === 'object' ? resultData.scoreB : (winnerIdx === 1 ? '✓' : '-');
   
@@ -618,8 +617,12 @@ function renderTournamentDetail(tournament) {
   teamsList.innerHTML = teamIds.length === 0
     ? '<div class="empty">Nenhum time.</div>'
     : teamIds.map(tid => { const t = state.teams.find(x => x.id === tid); return `<span class="badge" style="background:#e3f2fd; margin:2px; display:inline-block;">${t ? t.name : tid}</span>`; }).join('');
+  
   const actions = document.getElementById('tournamentActionButtons');
   if (tournament.status === 'pending' && state.userRole === 'admin') actions.classList.remove('hidden'); else actions.classList.add('hidden');
+  
+  // Renderiza classificação final e chaveamento
+  renderStandings(tournament, 'tdStandings');
   renderBracketDE(tournament, 'tdBracket', state.userRole !== 'admin');
 }
 
@@ -657,22 +660,19 @@ async function startTournament() {
   alert('Torneio iniciado!'); openTournamentDetail(tournament.id);
 }
 
-// ----------------------------------------------------
-// NOVO: SALVAR PLACAR INLINE
-// ----------------------------------------------------
 async function saveInlineResultDE(tournamentId, jogoId) {
   const scoreAInput = document.getElementById(`match_${jogoId}_score0`);
   const scoreBInput = document.getElementById(`match_${jogoId}_score1`);
   
   if (!scoreAInput || !scoreBInput || scoreAInput.value === '' || scoreBInput.value === '') {
-    return alert('Preencha o placar dos dois times antes de salvar.');
+    return alert('Preencha o placar das duas equipas antes de salvar.');
   }
 
   const scoreA = parseInt(scoreAInput.value);
   const scoreB = parseInt(scoreBInput.value);
 
   if (scoreA === scoreB) {
-    return alert('Em fases eliminatórias, não pode haver empate. Caso o jogo tenha ido para pênaltis ou outro desempate, registre o placar final considerando o vencedor.');
+    return alert('Em fases eliminatórias, não pode haver empate. Caso o jogo tenha ido para penáltis, registe o placar final considerando o vencedor.');
   }
 
   const winnerIdx = scoreA > scoreB ? 0 : 1;
@@ -694,11 +694,8 @@ async function saveInlineResultDE(tournamentId, jogoId) {
   renderTournamentDetail(tournament);
 }
 
-// ----------------------------------------------------
-// NOVO: DESFAZER PLACAR INLINE
-// ----------------------------------------------------
 async function undoMatchResultDE(tournamentId, jogoId) {
-  if(!confirm('Desfazer o resultado deste jogo? (Atenção: se outras partidas já dependerem deste resultado, a chave delas voltará a ficar aguardando).')) return;
+  if(!confirm('Desfazer o resultado deste jogo? (Atenção: se outras partidas já dependerem deste resultado, voltarão ao estado "Aguardando").')) return;
   
   const tournament = state.tournaments.find(t => t.id === tournamentId) || state.currentTournament;
   let results = { ...(tournament.results || {}) };
@@ -709,13 +706,143 @@ async function undoMatchResultDE(tournamentId, jogoId) {
   await updateDoc(doc(db, 'tournaments', tournamentId), {
     results, status: 'active', updatedAt: new Date().toISOString()
   });
+  tournament.status = 'active';
   renderTournamentDetail(tournament);
 }
 
 // ============================================================
+// LÓGICA DE CLASSIFICAÇÃO FINAL (STANDINGS)
+// ============================================================
+function calculateStandings(tournament) {
+  if (tournament.status !== 'finished') return [];
+  const size = tournament.bracketSize;
+  const map = MAPS[size];
+  const results = tournament.results || {};
+  const seeds = tournament.seeds || {};
+
+  // Função auxiliar que recupera quem perdeu o jogo percorrendo a árvore de trás para a frente
+  const getLoser = (matchId) => {
+    const res = results[matchId];
+    if (!res) return null;
+    const m = matchById(map, matchId);
+    const a = resolveSlot(map, m.s[0], seeds, results);
+    const b = resolveSlot(map, m.s[1], seeds, results);
+    const wIdx = typeof res === 'object' ? res.winner : res;
+    return wIdx === 0 ? b.teamId : a.teamId;
+  };
+
+  const getWinner = (matchId) => {
+    const res = results[matchId];
+    if (!res) return null;
+    const m = matchById(map, matchId);
+    const a = resolveSlot(map, m.s[0], seeds, results);
+    const b = resolveSlot(map, m.s[1], seeds, results);
+    const wIdx = typeof res === 'object' ? res.winner : res;
+    return wIdx === 0 ? a.teamId : b.teamId;
+  };
+
+  const standings = [];
+  
+  // 1. Grande Final
+  const finalGameMatch = map.winners.flat().find(g => g.label === 'Final');
+  if (finalGameMatch) {
+    const championId = getWinner(finalGameMatch.id);
+    const runnerUpId = getLoser(finalGameMatch.id);
+    if (championId) standings.push({ pos: '1º Lugar', teamId: championId });
+    if (runnerUpId) standings.push({ pos: '2º Lugar', teamId: runnerUpId });
+  }
+
+  // 2. Chave dos Perdedores (De trás para a frente para aplicar a regra correta)
+  const losersCols = map.losers;
+  const numCols = losersCols.length;
+
+  // 3º Lugar (Última coluna da repescagem)
+  if (numCols >= 1) {
+    losersCols[numCols - 1].forEach(m => {
+      const loserId = getLoser(m.id);
+      if (loserId) standings.push({ pos: '3º Lugar', teamId: loserId });
+    });
+  }
+
+  // 4º Lugar (Penúltima coluna)
+  if (numCols >= 2) {
+    losersCols[numCols - 2].forEach(m => {
+      const loserId = getLoser(m.id);
+      if (loserId) standings.push({ pos: '4º Lugar', teamId: loserId });
+    });
+  }
+
+  // 5º-6º Lugar (Antepenúltima coluna)
+  if (numCols >= 3) {
+    const col = losersCols[numCols - 3];
+    const losers = [];
+    col.forEach(m => { const id = getLoser(m.id); if (id) losers.push(id); });
+    const label = losers.length === 1 ? '5º Lugar' : '5º - 6º Lugar';
+    losers.forEach(id => standings.push({ pos: label, teamId: id }));
+  }
+
+  // 7º-8º Lugar
+  if (numCols >= 4) {
+    const col = losersCols[numCols - 4];
+    const losers = [];
+    col.forEach(m => { const id = getLoser(m.id); if (id) losers.push(id); });
+    const label = losers.length === 1 ? '7º Lugar' : '7º - 8º Lugar';
+    losers.forEach(id => standings.push({ pos: label, teamId: id }));
+  }
+
+  // 9º-10º Lugar
+  if (numCols >= 5) {
+    const col = losersCols[numCols - 5];
+    const losers = [];
+    col.forEach(m => { const id = getLoser(m.id); if (id) losers.push(id); });
+    const label = losers.length === 1 ? '9º Lugar' : '9º - 10º Lugar';
+    losers.forEach(id => standings.push({ pos: label, teamId: id }));
+  }
+
+  return standings;
+}
+
+function renderStandings(tournament, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  if (tournament.status !== 'finished') {
+    container.innerHTML = '';
+    container.classList.add('hidden');
+    return;
+  }
+
+  const standings = calculateStandings(tournament);
+  if (!standings || standings.length === 0) return;
+
+  let html = '<div class="standings-box"><h4 class="mb" style="color: var(--sidebar);">🏆 Classificação Final</h4><div class="standings-list">';
+  
+  standings.forEach(item => {
+    let medal = '';
+    let extraClass = '';
+    if (item.pos === '1º Lugar') { medal = '🥇'; extraClass = 'first-place'; }
+    else if (item.pos === '2º Lugar') { medal = '🥈'; extraClass = 'second-place'; }
+    else if (item.pos === '3º Lugar') { medal = '🥉'; extraClass = 'third-place'; }
+    else { medal = '🏅'; extraClass = 'other-place'; }
+
+    html += `
+      <div class="standing-item ${extraClass}">
+        <div class="standing-pos">${medal} ${item.pos}</div>
+        <div class="standing-team">${teamName(item.teamId)}</div>
+      </div>
+    `;
+  });
+  
+  html += '</div></div>';
+  container.innerHTML = html;
+  container.classList.remove('hidden');
+}
+
+
+// ============================================================
 // ÁREA DO PROFESSOR
 // ============================================================
-// (Permanece igual...)
+
 async function loadProfTeams() {
   const snap = await getDocs(query(collection(db, 'teams'), where('schoolId', '==', state.currentUser.schoolId)));
   state.profTeams = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -823,6 +950,9 @@ async function openProfTournamentDetail(id) {
     <span class="badge ${tournament.category}">${CATEGORY_LABELS[tournament.category]}</span>
     <span class="badge ${tournament.gender}">${GENDER_LABELS[tournament.gender]}</span>
     <span class="badge" style="text-transform:capitalize; margin-left:6px;">${statusToLabel(tournament.status)}</span>`;
+  
+  // Renderiza classificação e chaveamento para o professor ver
+  renderStandings(tournament, 'ptdStandings');
   renderBracketDE(tournament, 'ptdBracket', true);
   show('profTournament-detail');
 }
