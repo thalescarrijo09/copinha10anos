@@ -8,6 +8,7 @@
 </head>
 <body>
 
+  <!-- LOGIN -->
   <div id="loginView" class="login-container">
     <div class="login-box">
       <img src="logo.png" alt="Logo Copa" class="login-logo">
@@ -20,7 +21,12 @@
     </div>
   </div>
 
+  <!-- APP -->
   <div id="appView" class="app-shell">
+    
+    <!-- OVERLAY PARA O MENU MOBILE -->
+    <div class="sidebar-overlay" onclick="app.toggleSidebar()"></div>
+
     <div class="sidebar">
       <div class="sidebar-header">
         <img src="logo.png" alt="Logo Copa" class="sidebar-logo">
@@ -36,19 +42,26 @@
         <div class="nav-item" onclick="app.show('profTeams')">Meus Times</div>
         <div class="nav-item" onclick="app.show('profTournaments')">Torneios e Tabelas</div>
       </div>
-      <div class="nav-item" style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.2); color: #ffcc80;" onclick="app.logout()">
+      <div class="nav-item" style="margin-top: 40px; border-top: 1px solid rgba(0,0,0,0.1); color: #ffcc80;" onclick="app.logout()">
         Sair (<span id="userName"></span>)
       </div>
     </div>
 
     <div class="main-content">
+      
+      <!-- CABEÇALHO MOBILE (Só aparece no celular) -->
+      <div class="mobile-header">
+        <button class="menu-btn" onclick="app.toggleSidebar()">☰ Menu</button>
+        <span class="mobile-title">11ª Copa</span>
+      </div>
 
+      <!-- ADMIN DASHBOARD -->
       <div id="view-dashboard" class="view">
         <div class="card">
           <h3>Dashboard Administrativo</h3>
           <p class="small">Resumo da 11ª Copa</p>
         </div>
-        <div class="row">
+        <div class="row dashboard-cards">
           <div class="col card"><h3 id="dashSchools">0</h3><p class="small">Escolas cadastradas</p></div>
           <div class="col card"><h3 id="dashProfessors">0</h3><p class="small">Professores</p></div>
           <div class="col card"><h3 id="dashTeams">0</h3><p class="small">Times</p></div>
@@ -56,37 +69,44 @@
         </div>
       </div>
 
+      <!-- ADMIN SCHOOLS -->
       <div id="view-schools" class="view hidden">
         <div class="card">
           <div class="card-header">
             <h3>Escolas</h3>
-            <button onclick="app.openSchoolModal()">+ Nova Escola</button>
+            <button onclick="app.openSchoolModal()">+ Nova</button>
           </div>
-          <table>
-            <thead><tr><th>Nome</th><th>Ações</th></tr></thead>
-            <tbody id="schoolsTable"></tbody>
-          </table>
+          <div class="table-responsive">
+            <table>
+              <thead><tr><th>Nome</th><th>Ações</th></tr></thead>
+              <tbody id="schoolsTable"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
+      <!-- ADMIN PROFESSORS -->
       <div id="view-professors" class="view hidden">
         <div class="card">
           <div class="card-header">
             <h3>Professores</h3>
-            <button onclick="app.openProfessorModal()">+ Novo Professor</button>
+            <button onclick="app.openProfessorModal()">+ Novo</button>
           </div>
-          <table>
-            <thead><tr><th>Nome</th><th>E-mail</th><th>Ações</th></tr></thead>
-            <tbody id="professorsTable"></tbody>
-          </table>
+          <div class="table-responsive">
+            <table>
+              <thead><tr><th>Nome</th><th>E-mail</th><th>Ações</th></tr></thead>
+              <tbody id="professorsTable"></tbody>
+            </table>
+          </div>
           <p class="small mt">A senha definida aqui será usada para o professor acessar o sistema.</p>
         </div>
       </div>
 
+      <!-- ADMIN TIMES -->
       <div id="view-teams" class="view hidden">
         <div class="card">
           <div class="card-header"><h3>Cadastrar Times em Lote</h3></div>
-          <div class="row mb">
+          <div class="row mb team-filters">
             <div class="col">
               <label>Modalidade</label>
               <select id="teamBatchModality">
@@ -126,6 +146,7 @@
         </div>
       </div>
 
+      <!-- ADMIN TOURNAMENTS -->
       <div id="view-tournaments" class="view hidden">
         <div class="card">
           <div class="card-header"><h3>Torneios</h3></div>
@@ -133,6 +154,7 @@
         </div>
       </div>
 
+      <!-- ADMIN TOURNAMENT DETAIL -->
       <div id="view-tournament-detail" class="view hidden">
         <div class="card">
           <div class="card-header">
@@ -143,9 +165,9 @@
             <button onclick="app.show('tournaments')">Voltar</button>
           </div>
           <div class="tournament-actions">
-            <button class="secondary" onclick="app.openEditTournamentModal(state.currentTournament.id)">✏️ Editar Nome</button>
-            <button class="secondary" onclick="app.openManageTeamsModal(state.currentTournament.id)">👥 Gerenciar Times</button>
-            <button class="danger" onclick="app.deleteTournament(state.currentTournament.id)">🗑️ Excluir Torneio</button>
+            <button class="secondary" onclick="app.openEditTournamentModal(state.currentTournament.id)">✏️ Nome</button>
+            <button class="secondary" onclick="app.openManageTeamsModal(state.currentTournament.id)">👥 Times</button>
+            <button class="danger" onclick="app.deleteTournament(state.currentTournament.id)">🗑️ Excluir</button>
           </div>
           <div id="tdTeams"></div>
           <div class="mt">
@@ -154,15 +176,16 @@
           </div>
           <div id="tournamentActionButtons" class="tournament-actions hidden">
             <button class="secondary" onclick="app.shuffleTournamentTeams()">🔀 Embaralhar Ordem</button>
-            <button class="accent" onclick="app.startTournament()">▶ Iniciar Torneio</button>
+            <button class="accent" onclick="app.startTournament()">▶ Iniciar</button>
           </div>
           <div class="mt">
             <h4 class="mb">Chaveamento</h4>
-            <div id="tdBracket"></div>
+            <div class="bracket-wrapper" id="tdBracket"></div>
           </div>
         </div>
       </div>
 
+      <!-- PROFESSOR TEAMS -->
       <div id="view-profTeams" class="view hidden">
         <div class="card">
           <h3>Meus Times</h3>
@@ -170,6 +193,7 @@
         </div>
       </div>
 
+      <!-- PROFESSOR ATHLETES -->
       <div id="view-profAthletes" class="view hidden">
         <div class="card">
           <div class="card-header">
@@ -177,18 +201,21 @@
             <button onclick="app.show('profTeams')">Voltar</button>
           </div>
           <p class="small mb" id="athTeamInfo"></p>
-          <div class="flex mb" style="gap:10px;">
-            <input type="text" id="athleteName" placeholder="Nome do atleta" style="flex:1;">
-            <input type="number" id="athleteNumber" placeholder="Nº" style="width:80px;">
+          <div class="flex mb athlete-inputs">
+            <input type="text" id="athleteName" placeholder="Nome do atleta">
+            <input type="number" id="athleteNumber" placeholder="Nº">
             <button onclick="app.addAthlete()">Adicionar</button>
           </div>
-          <table>
-            <thead><tr><th>Nº</th><th>Nome</th><th>Ações</th></tr></thead>
-            <tbody id="athletesTable"></tbody>
-          </table>
+          <div class="table-responsive">
+            <table>
+              <thead><tr><th>Nº</th><th>Nome</th><th>Ações</th></tr></thead>
+              <tbody id="athletesTable"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
+      <!-- PROFESSOR TOURNAMENTS -->
       <div id="view-profTournaments" class="view hidden">
         <div class="card">
           <h3>Torneios e Tabelas</h3>
@@ -196,6 +223,7 @@
         </div>
       </div>
 
+      <!-- PROFESSOR TOURNAMENT DETAIL -->
       <div id="view-profTournament-detail" class="view hidden">
         <div class="card">
           <div class="card-header">
@@ -205,17 +233,19 @@
             </div>
             <button onclick="app.show('profTournaments')">Voltar</button>
           </div>
-          <div id="ptdBracket"></div>
+          <div class="bracket-wrapper" id="ptdBracket"></div>
         </div>
       </div>
 
     </div>
   </div>
 
+  <!-- MODALS -->
   <div id="modalOverlay" class="modal-overlay">
     <div class="modal" id="modalContent"></div>
   </div>
 
+  <!-- APP SCRIPT -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
