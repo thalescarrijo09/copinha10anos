@@ -166,7 +166,6 @@ function show(viewId) {
   if (viewId === 'profTeams') { loadProfTeams(); }
   if (viewId === 'profTournaments') { loadProfTournaments(); }
   
-  // Fecha o menu mobile automaticamente ao clicar em um link
   const sidebar = document.querySelector('.sidebar');
   const overlay = document.querySelector('.sidebar-overlay');
   if(sidebar && sidebar.classList.contains('active')) {
@@ -321,10 +320,7 @@ async function createBatchTeams() {
   checked.forEach(cb => {
     const schoolId = cb.value;
     const school = state.schools.find(s => s.id === schoolId);
-    const schoolName = school ? school.name : 'Escola';
-    
-    // NOME ALTERADO AQUI: Apenas o nome da escola, melhorando a responsividade
-    const teamName = schoolName; 
+    const teamName = school ? school.name : 'Escola';
     
     const teamRef = doc(collection(db, 'teams'));
     batch.set(teamRef, { name: teamName, schoolId, modality, category, gender, tournamentId, createdAt: new Date().toISOString(), athletes: [] });
@@ -447,10 +443,7 @@ async function saveTournamentTeams(id) {
     if (!confirm('Alterar os times irá RESETAR o chaveamento (resultados serão apagados). Continuar?')) return;
   }
 
-  const updateData = {
-    teamIds: newTeamIds,
-    updatedAt: new Date().toISOString()
-  };
+  const updateData = { teamIds: newTeamIds, updatedAt: new Date().toISOString() };
   if (wasStarted) {
     updateData.status = 'pending';
     updateData.seeds = {};
@@ -459,10 +452,7 @@ async function saveTournamentTeams(id) {
   }
 
   await updateDoc(doc(db, 'tournaments', id), updateData);
-  closeModal();
-  await loadTournaments();
-  renderTournamentsList();
-  renderDashboard();
+  closeModal(); await loadTournaments(); renderTournamentsList(); renderDashboard();
 
   if (state.currentTournament && state.currentTournament.id === id) {
     const fresh = await getDoc(doc(db, 'tournaments', id));
@@ -477,18 +467,15 @@ async function deleteTournament(id) {
   const name = t ? t.name : 'este torneio';
   if (!confirm(`Excluir o torneio "${name}"?\n\nOs TIMES NÃO serão excluídos, apenas o torneio.`)) return;
   await deleteDoc(doc(db, 'tournaments', id));
-  await loadTournaments();
-  renderTournamentsList();
-  renderDashboard();
+  await loadTournaments(); renderTournamentsList(); renderDashboard();
   if (state.currentTournament && state.currentTournament.id === id) {
-    state.currentTournament = null;
-    show('tournaments');
+    state.currentTournament = null; show('tournaments');
   }
   alert('Torneio excluído!');
 }
 
 // ============================================================
-// CHAVEAMENTO DUPLA ELIMINAÇÃO
+// CHAVEAMENTO DUPLA ELIMINAÇÃO (ATUALIZADO COM PLACAR)
 // ============================================================
 
 function teamName(id) {
@@ -504,64 +491,75 @@ function matchById(map, id) {
 }
 
 function resolveSlot(map, slot, seeds, results) {
-  if (slot.seed !== undefined) {
-    return { teamId: seeds[slot.seed] || null, decided: true, feedLabel: null };
-  }
+  if (slot.seed !== undefined) return { teamId: seeds[slot.seed] || null, decided: true, feedLabel: null };
   if (slot.win !== undefined) {
     const r = results[slot.win];
     if (r !== undefined) {
       const m = matchById(map, slot.win);
-      return resolveSlot(map, m.s[r], seeds, results);
+      const wIdx = typeof r === 'object' ? r.winner : r; // Compatibilidade com bd antigo
+      return resolveSlot(map, m.s[wIdx], seeds, results);
     }
-    return { teamId: null, decided: false, feedLabel: 'Vencedor do Jogo ' + slot.win };
+    return { teamId: null, decided: false, feedLabel: 'Venc. Jogo ' + slot.win };
   }
   if (slot.lose !== undefined) {
     const r = results[slot.lose];
     if (r !== undefined) {
       const m = matchById(map, slot.lose);
-      return resolveSlot(map, m.s[1 - r], seeds, results);
+      const wIdx = typeof r === 'object' ? r.winner : r;
+      return resolveSlot(map, m.s[1 - wIdx], seeds, results);
     }
-    return { teamId: null, decided: false, feedLabel: 'Perdedor do Jogo ' + slot.lose };
+    return { teamId: null, decided: false, feedLabel: 'Perd. Jogo ' + slot.lose };
   }
   return { teamId: null, decided: false, feedLabel: '?' };
 }
 
-function isFinalGame(label) {
-  return label === 'Final' || label === 'Final perd.';
-}
+function isFinalGame(label) { return label === 'Final' || label === 'Final perd.'; }
 
 function renderMatchCardDE(map, m, seeds, results, readOnly, tournamentId) {
   const a = resolveSlot(map, m.s[0], seeds, results);
   const b = resolveSlot(map, m.s[1], seeds, results);
-  const winnerIdx = results[m.id];
+  const resultData = results[m.id];
+  const winnerIdx = resultData !== undefined ? (typeof resultData === 'object' ? resultData.winner : resultData) : undefined;
+  
+  // Trata dados antigos (se não for objeto, exibe um check) e os novos (mostra o placar)
+  const scoreA = resultData !== undefined && typeof resultData === 'object' ? resultData.scoreA : (winnerIdx === 0 ? '✓' : '-');
+  const scoreB = resultData !== undefined && typeof resultData === 'object' ? resultData.scoreB : (winnerIdx === 1 ? '✓' : '-');
+  
   const bothDecided = a.decided && b.decided;
   const isFinal = isFinalGame(m.label);
   const cardClass = isFinal ? 'grand-final' : (m.label.startsWith('Final perd') ? 'loser-bracket' : 'winner-bracket');
+  const canEdit = !readOnly && bothDecided && winnerIdx === undefined;
 
-  const sideHtml = (info, idx) => {
+  const sideHtml = (info, idx, score) => {
     const isWin = winnerIdx === idx;
     const label = info.decided
-      ? `<span class="${isWin ? 'winner' : ''}">${teamName(info.teamId)}</span>`
+      ? `<span class="team-name ${isWin ? 'winner' : ''}">${teamName(info.teamId)}</span>`
       : `<span class="pending-feed">${info.feedLabel}</span>`;
-    return `<div>${label} ${isWin ? '✓' : ''}</div>`;
+    
+    const inputHtml = canEdit 
+      ? `<input type="number" id="match_${m.id}_score${idx}" class="inline-score" placeholder="-">`
+      : (resultData !== undefined ? `<span class="score-display">${score}</span>` : '');
+
+    return `<div class="match-side">${label} ${inputHtml}</div>`;
   };
 
-  const canEdit = !readOnly && bothDecided && winnerIdx === undefined;
-  const actionHtml = winnerIdx !== undefined
-    ? '<span class="badge">Finalizado</span>'
+  const actionHtml = winnerIdx !== undefined && !readOnly
+    ? `<button class="secondary small-btn" onclick="app.undoMatchResultDE('${tournamentId}', ${m.id})">Desfazer</button>`
     : canEdit
-      ? `<button onclick="app.openMatchModalDE('${tournamentId}', ${m.id})">Resultado</button>`
-      : '<span class="badge" style="background:#fffde7;">Aguardando</span>';
+      ? `<button class="accent small-btn" onclick="app.saveInlineResultDE('${tournamentId}', ${m.id})">Salvar</button>`
+      : bothDecided && readOnly 
+        ? '<span class="badge" style="background:#fffde7;">Aguardando</span>'
+        : '';
 
   return `
     <div class="match-card ${cardClass}">
       <div class="match-teams">
-        <div style="font-size:0.7rem; color:#999; margin-bottom:4px;">${m.label}</div>
-        ${sideHtml(a, 0)}
-        <div style="color:#999; font-size:0.75rem; margin:2px 0;">vs</div>
-        ${sideHtml(b, 1)}
+        <div style="font-size:0.7rem; color:#999; margin-bottom:6px;">${m.label}</div>
+        ${sideHtml(a, 0, scoreA)}
+        <div class="match-vs">vs</div>
+        ${sideHtml(b, 1, scoreB)}
       </div>
-      <div>${actionHtml}</div>
+      ${actionHtml ? `<div class="match-actions">${actionHtml}</div>` : ''}
     </div>`;
 }
 
@@ -653,53 +651,36 @@ async function startTournament() {
   seedKeys.forEach((k, i) => { seeds[k] = teamIds[i] || null; });
 
   await updateDoc(doc(db, 'tournaments', tournament.id), {
-    bracketSize: n,
-    seeds,
-    results: {},
-    status: 'active',
-    startedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    bracketSize: n, seeds, results: {}, status: 'active',
+    startedAt: new Date().toISOString(), updatedAt: new Date().toISOString()
   });
-
-  alert('Torneio iniciado!');
-  openTournamentDetail(tournament.id);
+  alert('Torneio iniciado!'); openTournamentDetail(tournament.id);
 }
 
-function openMatchModalDE(tournamentId, jogoId) {
-  const tournament = state.tournaments.find(t => t.id === tournamentId) || state.currentTournament;
-  if (!tournament) return;
-  const map = MAPS[tournament.bracketSize];
-  const m = matchById(map, jogoId);
-  if (!m) return;
-  const a = resolveSlot(map, m.s[0], tournament.seeds, tournament.results || {});
-  const b = resolveSlot(map, m.s[1], tournament.seeds, tournament.results || {});
-  if (!a.decided || !b.decided) return alert('Este jogo ainda não tem os dois times definidos.');
+// ----------------------------------------------------
+// NOVO: SALVAR PLACAR INLINE
+// ----------------------------------------------------
+async function saveInlineResultDE(tournamentId, jogoId) {
+  const scoreAInput = document.getElementById(`match_${jogoId}_score0`);
+  const scoreBInput = document.getElementById(`match_${jogoId}_score1`);
+  
+  if (!scoreAInput || !scoreBInput || scoreAInput.value === '' || scoreBInput.value === '') {
+    return alert('Preencha o placar dos dois times antes de salvar.');
+  }
 
-  openModal(`
-    <div class="modal-header"><h3>Lançar Resultado — ${m.label}</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
-    <div style="margin-bottom:16px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:20px;">
-        <div style="text-align:center; flex:1;"><div style="font-weight:bold; margin-bottom:8px;">${teamName(a.teamId)}</div><input type="number" id="scoreA" value="0" min="0" style="width:80px; text-align:center; font-size:1.2rem;"></div>
-        <div style="font-weight:bold; color:#777;">vs</div>
-        <div style="text-align:center; flex:1;"><div style="font-weight:bold; margin-bottom:8px;">${teamName(b.teamId)}</div><input type="number" id="scoreB" value="0" min="0" style="width:80px; text-align:center; font-size:1.2rem;"></div>
-      </div>
-    </div>
-    <div style="margin-bottom:16px;">
-      <label style="display:block; margin-bottom:6px; font-weight:600;">Vencedor:</label>
-      <select id="matchWinner"><option value="">Selecione...</option>
-        <option value="0">${teamName(a.teamId)}</option>
-        <option value="1">${teamName(b.teamId)}</option>
-      </select>
-    </div>
-    <button onclick="app.saveMatchResultDE('${tournamentId}', ${jogoId})">Salvar Resultado</button>`);
-}
+  const scoreA = parseInt(scoreAInput.value);
+  const scoreB = parseInt(scoreBInput.value);
 
-async function saveMatchResultDE(tournamentId, jogoId) {
-  const winnerIdx = document.getElementById('matchWinner').value;
-  if (winnerIdx === '') return alert('Selecione o vencedor.');
+  if (scoreA === scoreB) {
+    return alert('Em fases eliminatórias, não pode haver empate. Caso o jogo tenha ido para pênaltis ou outro desempate, registre o placar final considerando o vencedor.');
+  }
+
+  const winnerIdx = scoreA > scoreB ? 0 : 1;
+
   const tournament = state.tournaments.find(t => t.id === tournamentId) || state.currentTournament;
   const results = { ...(tournament.results || {}) };
-  results[jogoId] = parseInt(winnerIdx);
+  
+  results[jogoId] = { scoreA, scoreB, winner: winnerIdx };
   tournament.results = results;
 
   const map = MAPS[tournament.bracketSize];
@@ -710,14 +691,31 @@ async function saveMatchResultDE(tournamentId, jogoId) {
     results, status: newStatus, updatedAt: new Date().toISOString()
   });
   tournament.status = newStatus;
-  closeModal();
-  openTournamentDetail(tournamentId);
+  renderTournamentDetail(tournament);
+}
+
+// ----------------------------------------------------
+// NOVO: DESFAZER PLACAR INLINE
+// ----------------------------------------------------
+async function undoMatchResultDE(tournamentId, jogoId) {
+  if(!confirm('Desfazer o resultado deste jogo? (Atenção: se outras partidas já dependerem deste resultado, a chave delas voltará a ficar aguardando).')) return;
+  
+  const tournament = state.tournaments.find(t => t.id === tournamentId) || state.currentTournament;
+  let results = { ...(tournament.results || {}) };
+  
+  delete results[jogoId];
+  tournament.results = results;
+
+  await updateDoc(doc(db, 'tournaments', tournamentId), {
+    results, status: 'active', updatedAt: new Date().toISOString()
+  });
+  renderTournamentDetail(tournament);
 }
 
 // ============================================================
 // ÁREA DO PROFESSOR
 // ============================================================
-
+// (Permanece igual...)
 async function loadProfTeams() {
   const snap = await getDocs(query(collection(db, 'teams'), where('schoolId', '==', state.currentUser.schoolId)));
   state.profTeams = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -829,7 +827,6 @@ async function openProfTournamentDetail(id) {
   show('profTournament-detail');
 }
 
-// FUNÇÃO PARA O MENU RESPONSIVO MOBILE
 function toggleSidebar() {
   const sidebar = document.querySelector('.sidebar');
   const overlay = document.querySelector('.sidebar-overlay');
@@ -837,9 +834,6 @@ function toggleSidebar() {
   if (overlay) overlay.classList.toggle('active');
 }
 
-// ============================================================
-// EXPOSIÇÃO GLOBAL (window.app)
-// ============================================================
 window.app = {
   login, logout, show,
   openSchoolModal, saveSchool, deleteSchool,
@@ -848,9 +842,8 @@ window.app = {
   openTournamentDetail, openEditTournamentModal, saveTournamentName,
   openManageTeamsModal, saveTournamentTeams, deleteTournament,
   shuffleTournamentTeams, startTournament,
-  openMatchModalDE, saveMatchResultDE,
+  saveInlineResultDE, undoMatchResultDE,
   closeModal,
   openAthletes, addAthlete, removeAthlete,
-  loadProfTournaments, openProfTournamentDetail,
-  toggleSidebar // Exportada para ser usada no HTML do celular
+  loadProfTournaments, openProfTournamentDetail, toggleSidebar
 };
