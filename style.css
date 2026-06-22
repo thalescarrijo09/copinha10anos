@@ -27,7 +27,7 @@ body { background: var(--bg); color: var(--text); }
 }
 
 .login-logo {
-  width: 1500px;
+  width: 150px;
   height: auto;
   display: block;
   margin: 0 auto 20px auto;
