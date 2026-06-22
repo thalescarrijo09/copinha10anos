@@ -161,10 +161,13 @@ function show(viewId) {
   document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
   const el = document.getElementById('view-' + viewId);
   if (el) el.classList.remove('hidden');
+  
+  // Atualizações dinâmicas conforme a aba selecionada
   if (viewId === 'teams') { loadSchoolsForChecklist(); }
   if (viewId === 'tournaments') { renderTournamentsList(); }
   if (viewId === 'profTeams') { loadProfTeams(); }
   if (viewId === 'profTournaments') { loadProfTournaments(); }
+  if (viewId === 'generalStandings') { renderGeneralStandings(); }
   
   const sidebar = document.querySelector('.sidebar');
   const overlay = document.querySelector('.sidebar-overlay');
@@ -621,7 +624,6 @@ function renderTournamentDetail(tournament) {
   const actions = document.getElementById('tournamentActionButtons');
   if (tournament.status === 'pending' && state.userRole === 'admin') actions.classList.remove('hidden'); else actions.classList.add('hidden');
   
-  // Renderiza classificação final e chaveamento
   renderStandings(tournament, 'tdStandings');
   renderBracketDE(tournament, 'tdBracket', state.userRole !== 'admin');
 }
@@ -711,7 +713,7 @@ async function undoMatchResultDE(tournamentId, jogoId) {
 }
 
 // ============================================================
-// LÓGICA DE CLASSIFICAÇÃO FINAL (STANDINGS)
+// LÓGICA DE CLASSIFICAÇÃO (POR TORNEIO)
 // ============================================================
 function calculateStandings(tournament) {
   if (tournament.status !== 'finished') return [];
@@ -720,7 +722,6 @@ function calculateStandings(tournament) {
   const results = tournament.results || {};
   const seeds = tournament.seeds || {};
 
-  // Função auxiliar que recupera quem perdeu o jogo percorrendo a árvore de trás para a frente
   const getLoser = (matchId) => {
     const res = results[matchId];
     if (!res) return null;
@@ -743,7 +744,6 @@ function calculateStandings(tournament) {
 
   const standings = [];
   
-  // 1. Grande Final
   const finalGameMatch = map.winners.flat().find(g => g.label === 'Final');
   if (finalGameMatch) {
     const championId = getWinner(finalGameMatch.id);
@@ -752,11 +752,9 @@ function calculateStandings(tournament) {
     if (runnerUpId) standings.push({ pos: '2º Lugar', teamId: runnerUpId });
   }
 
-  // 2. Chave dos Perdedores (De trás para a frente para aplicar a regra correta)
   const losersCols = map.losers;
   const numCols = losersCols.length;
 
-  // 3º Lugar (Última coluna da repescagem)
   if (numCols >= 1) {
     losersCols[numCols - 1].forEach(m => {
       const loserId = getLoser(m.id);
@@ -764,7 +762,6 @@ function calculateStandings(tournament) {
     });
   }
 
-  // 4º Lugar (Penúltima coluna)
   if (numCols >= 2) {
     losersCols[numCols - 2].forEach(m => {
       const loserId = getLoser(m.id);
@@ -772,7 +769,6 @@ function calculateStandings(tournament) {
     });
   }
 
-  // 5º-6º Lugar (Antepenúltima coluna)
   if (numCols >= 3) {
     const col = losersCols[numCols - 3];
     const losers = [];
@@ -781,7 +777,6 @@ function calculateStandings(tournament) {
     losers.forEach(id => standings.push({ pos: label, teamId: id }));
   }
 
-  // 7º-8º Lugar
   if (numCols >= 4) {
     const col = losersCols[numCols - 4];
     const losers = [];
@@ -790,7 +785,6 @@ function calculateStandings(tournament) {
     losers.forEach(id => standings.push({ pos: label, teamId: id }));
   }
 
-  // 9º-10º Lugar
   if (numCols >= 5) {
     const col = losersCols[numCols - 5];
     const losers = [];
@@ -836,6 +830,88 @@ function renderStandings(tournament, containerId) {
   html += '</div></div>';
   container.innerHTML = html;
   container.classList.remove('hidden');
+}
+
+// ============================================================
+// NOVO: CLASSIFICAÇÃO GERAL DAS ESCOLAS
+// ============================================================
+function renderGeneralStandings() {
+  const tbody = document.getElementById('generalStandingsTable');
+  if (!tbody) return;
+
+  const schoolStats = {};
+  
+  // 1. Inicializa o contador de pontos e desempates para cada escola
+  state.schools.forEach(s => {
+    schoolStats[s.id] = {
+      id: s.id,
+      name: s.name,
+      points: 0,
+      places: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+    };
+  });
+
+  // 2. Analisa todos os torneios finalizados
+  state.tournaments.filter(t => t.status === 'finished').forEach(tournament => {
+    const standings = calculateStandings(tournament);
+    
+    standings.forEach(item => {
+      const team = state.teams.find(x => x.id === item.teamId);
+      if (!team) return;
+      const schoolId = team.schoolId;
+      if (!schoolStats[schoolId]) return;
+
+      // Extrai o número da posição (ex: '5º - 6º Lugar' vira o número 5)
+      let posNum = parseInt(item.pos); 
+      
+      // Pontuação Oficial
+      if (posNum === 1) schoolStats[schoolId].points += 10;
+      else if (posNum === 2) schoolStats[schoolId].points += 7;
+      else if (posNum === 3) schoolStats[schoolId].points += 4;
+      else if (posNum === 4) schoolStats[schoolId].points += 2;
+      else if (posNum >= 5 && posNum <= 9) schoolStats[schoolId].points += 1;
+      
+      // Critério de Desempate: regista o número de ouros, pratas, etc. (até ao 6º lugar)
+      if (posNum >= 1 && posNum <= 6) {
+        schoolStats[schoolId].places[posNum] += 1;
+      }
+    });
+  });
+
+  // 3. Ordena as escolas com base na Matemática do Art. 34º
+  const sortedSchools = Object.values(schoolStats).sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;             // Mais pontos globais
+    if (b.places[1] !== a.places[1]) return b.places[1] - a.places[1]; // Desempate 1: Mais 1º lugares
+    if (b.places[2] !== a.places[2]) return b.places[2] - a.places[2]; // Desempate 2: Mais 2º lugares
+    if (b.places[3] !== a.places[3]) return b.places[3] - a.places[3]; // Desempate 3: Mais 3º lugares
+    if (b.places[4] !== a.places[4]) return b.places[4] - a.places[4]; // Desempate 4: Mais 4º lugares
+    if (b.places[5] !== a.places[5]) return b.places[5] - a.places[5]; // Desempate 5: Mais 5º lugares
+    if (b.places[6] !== a.places[6]) return b.places[6] - a.places[6]; // Desempate 6: Mais 6º lugares
+    return a.name.localeCompare(b.name); // Empate Absoluto - Ordem alfabética aguardando Sorteio
+  });
+
+  if (sortedSchools.length === 0) {
+    tbody.innerHTML = '<tr><td colspan=\"4\" class=\"empty\">Nenhuma escola cadastrada ou torneios finalizados.</td></tr>';
+    return;
+  }
+
+  // 4. Desenha a tabela
+  tbody.innerHTML = sortedSchools.map((s, index) => {
+    let medal = '';
+    let extraStyle = '';
+    if (index === 0 && s.points > 0) { medal = '🏆 '; extraStyle = 'font-size:1.1rem; color:var(--primary);'; }
+    else if (index === 1 && s.points > 0) { medal = '🥈 '; }
+    else if (index === 2 && s.points > 0) { medal = '🥉 '; }
+    
+    return `<tr>
+      <td style=\"font-weight:bold; text-align:center; ${extraStyle}\">${index + 1}º</td>
+      <td style=\"${extraStyle}\">${medal}${s.name}</td>
+      <td style=\"font-weight:900; color:var(--primary); text-align:center; font-size:1.1rem;\">${s.points} pts</td>
+      <td class=\"small\" style=\"text-align:center; color:#666;\">
+        ${s.places[1]} 🥇 | ${s.places[2]} 🥈 | ${s.places[3]} 🥉
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 
@@ -951,7 +1027,6 @@ async function openProfTournamentDetail(id) {
     <span class="badge ${tournament.gender}">${GENDER_LABELS[tournament.gender]}</span>
     <span class="badge" style="text-transform:capitalize; margin-left:6px;">${statusToLabel(tournament.status)}</span>`;
   
-  // Renderiza classificação e chaveamento para o professor ver
   renderStandings(tournament, 'ptdStandings');
   renderBracketDE(tournament, 'ptdBracket', true);
   show('profTournament-detail');
@@ -975,5 +1050,6 @@ window.app = {
   saveInlineResultDE, undoMatchResultDE,
   closeModal,
   openAthletes, addAthlete, removeAthlete,
-  loadProfTournaments, openProfTournamentDetail, toggleSidebar
+  loadProfTournaments, openProfTournamentDetail, toggleSidebar,
+  renderGeneralStandings
 };
