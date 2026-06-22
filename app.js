@@ -242,12 +242,20 @@ function renderProfessorsTable() {
       <button class="danger" onclick="app.deleteProfessor('${p.id}')">Excluir</button></td></tr>`).join('');
 }
 
+// ----------------------------------------------------
+// ATUALIZADO: SALVAR PROFESSOR (Múltiplas Escolas)
+// ----------------------------------------------------
 async function saveProfessor(id) {
   const name = document.getElementById('profName').value.trim();
   const email = document.getElementById('profEmail').value.trim();
   const password = document.getElementById('profPassword').value;
-  const schoolId = document.getElementById('profSchool').value;
-  if (!name || !email || !schoolId) return alert('Preencha nome, e-mail e escola.');
+  
+  // Captura todas as escolas marcadas no checkbox
+  const checked = document.querySelectorAll('#profSchoolsChecklist input[type="checkbox"]:checked');
+  const schoolIds = Array.from(checked).map(c => c.value);
+
+  if (!name || !email || schoolIds.length === 0) return alert('Preencha nome, e-mail e selecione pelo menos uma escola.');
+  
   if (!id) {
     if (!password) return alert('Defina uma senha para o novo professor.');
     const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`, {
@@ -257,26 +265,46 @@ async function saveProfessor(id) {
     const data = await res.json();
     if (!res.ok) return alert('Erro ao criar usuário: ' + (data.error?.message || 'Erro desconhecido'));
     id = data.localId;
-    await setDoc(doc(db, 'users', id), { email, name, role: 'professor', schoolId });
+    // Salva com array 'schoolIds'
+    await setDoc(doc(db, 'users', id), { email, name, role: 'professor', schoolIds });
   } else {
-    await updateDoc(doc(db, 'users', id), { name, email, schoolId });
+    await updateDoc(doc(db, 'users', id), { name, email, schoolIds });
     if (password) alert('A senha só pode ser redefinida pelo administrador do Firebase ou pelo professor usando "Esqueci minha senha".');
   }
-  await setDoc(doc(db, 'professors', id), { name, email, schoolId }, { merge: true });
+  await setDoc(doc(db, 'professors', id), { name, email, schoolIds }, { merge: true });
   closeModal(); await loadProfessors(); renderProfessorsTable(); renderDashboard();
 }
 
+// ----------------------------------------------------
+// ATUALIZADO: MODAL DO PROFESSOR (Múltiplas Escolas)
+// ----------------------------------------------------
 function openProfessorModal(id) {
   const isEdit = !!id;
   const prof = isEdit ? state.professors.find(p => p.id === id) : null;
-  openModal(`<div class="modal-header"><h3>${isEdit ? 'Editar' : 'Novo'} Professor</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
+  
+  // Recupera escolas do professor (lidando com dados antigos que usavam schoolId string)
+  const pSchools = prof ? (prof.schoolIds || (prof.schoolId ? [prof.schoolId] : [])) : [];
+
+  const schoolsHtml = state.schools.map(s => `
+    <div class="school-check-item">
+      <input type="checkbox" value="${s.id}" id="pschk_${s.id}" ${pSchools.includes(s.id) ? 'checked' : ''}>
+      <label for="pschk_${s.id}">${s.name}</label>
+    </div>
+  `).join('');
+
+  openModal(`
+    <div class="modal-header"><h3>${isEdit ? 'Editar' : 'Novo'} Professor</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
     <input id="profName" value="${prof ? prof.name : ''}" placeholder="Nome completo">
     <input id="profEmail" value="${prof ? prof.email : ''}" placeholder="E-mail">
     <input id="profPassword" type="password" placeholder="${isEdit ? 'Nova senha (deixe em branco para não alterar)' : 'Senha de acesso'}">
-    <select id="profSchool"><option value="">Selecione a escola...</option>
-      ${state.schools.map(s => `<option value="${s.id}" ${prof && prof.schoolId === s.id ? 'selected' : ''}>${s.name}</option>`).join('')}
-    </select>
-    <button onclick="app.saveProfessor('${id || ''}')">Salvar</button>`);
+    
+    <label style="font-weight:600; display:block; margin-bottom:8px; margin-top:10px;">Escolas Vinculadas:</label>
+    <div class="schools-checklist" id="profSchoolsChecklist" style="margin-bottom:16px;">
+      ${schoolsHtml || '<div class="empty">Nenhuma escola cadastrada.</div>'}
+    </div>
+    
+    <button onclick="app.saveProfessor('${id || ''}')">Salvar</button>
+  `);
 }
 
 async function deleteProfessor(id) {
@@ -487,7 +515,9 @@ async function openTeamSquadModal(teamId) {
   const team = { id: tSnap.id, ...tSnap.data() };
   state.currentSquadTeam = team;
 
-  const isOwnerProfessor = state.userRole === 'professor' && state.currentUser && state.currentUser.schoolId === team.schoolId;
+  // Lógica de permissão: Admins não editam, Professores editam apenas times das SUAS escolas.
+  const userSchools = state.currentUser ? (state.currentUser.schoolIds || (state.currentUser.schoolId ? [state.currentUser.schoolId] : [])) : [];
+  const isOwnerProfessor = state.userRole === 'professor' && userSchools.includes(team.schoolId);
   const isEditable = isOwnerProfessor;
 
   let html = `
@@ -1031,9 +1061,22 @@ function renderGeneralStandings() {
 // ÁREA DO PROFESSOR (Gestão Geral e Histórico)
 // ============================================================
 
+// ----------------------------------------------------
+// ATUALIZADO: BUSCA DE TIMES POR MÚLTIPLAS ESCOLAS
+// ----------------------------------------------------
 async function loadProfTeams() {
-  const snap = await getDocs(query(collection(db, 'teams'), where('schoolId', '==', state.currentUser.schoolId)));
-  state.profTeams = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const userSchools = state.currentUser ? (state.currentUser.schoolIds || (state.currentUser.schoolId ? [state.currentUser.schoolId] : [])) : [];
+  
+  if (userSchools.length === 0) {
+    state.profTeams = [];
+    renderProfTeams();
+    return;
+  }
+
+  if (state.teams.length === 0) await loadTeams();
+  
+  // Filtra localmente todas as equipes onde o ID da escola bate com a lista do professor
+  state.profTeams = state.teams.filter(t => userSchools.includes(t.schoolId));
   renderProfTeams();
 }
 
