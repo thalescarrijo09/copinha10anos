@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>11ª Copa das Escolas Municipais</title>
-  <link rel="stylesheet" href="style.css?v=102">
+  <link rel="stylesheet" href="style.css?v=103">
 </head>
 <body>
 
@@ -32,11 +32,12 @@
         <div class="nav-item" onclick="app.show('dashboard')">Dashboard</div>
         <div class="nav-item" onclick="app.show('schools')">Escolas</div>
         <div class="nav-item" onclick="app.show('professors')">Professores</div>
-        <div class="nav-item" onclick="app.show('teams')">Times</div>
+        <div class="nav-item" onclick="app.show('teams')">Equipas</div>
         <div class="nav-item" onclick="app.show('tournaments')">Torneios e Tabelas</div>
+        <div class="nav-item" onclick="app.show('generalStandings')" style="color: var(--accent); font-weight: bold;">🏆 Classificação Geral</div>
       </div>
       <div id="navProfessor" class="hidden">
-        <div class="nav-item" onclick="app.show('profTeams')">Meus Times</div>
+        <div class="nav-item" onclick="app.show('profTeams')">As Minhas Equipas</div>
         <div class="nav-item" onclick="app.show('profTournaments')">Torneios e Tabelas</div>
       </div>
       <div class="nav-item" style="margin-top: 40px; border-top: 1px solid rgba(0,0,0,0.1); color: #ffcc80;" onclick="app.logout()">
@@ -57,9 +58,9 @@
           <p class="small">Resumo da 11ª Copa</p>
         </div>
         <div class="row dashboard-cards">
-          <div class="col card"><h3 id="dashSchools">0</h3><p class="small">Escolas cadastradas</p></div>
+          <div class="col card"><h3 id="dashSchools">0</h3><p class="small">Escolas registadas</p></div>
           <div class="col card"><h3 id="dashProfessors">0</h3><p class="small">Professores</p></div>
-          <div class="col card"><h3 id="dashTeams">0</h3><p class="small">Times</p></div>
+          <div class="col card"><h3 id="dashTeams">0</h3><p class="small">Equipas</p></div>
           <div class="col card"><h3 id="dashTournaments">0</h3><p class="small">Torneios</p></div>
         </div>
       </div>
@@ -97,7 +98,7 @@
 
       <div id="view-teams" class="view hidden">
         <div class="card">
-          <div class="card-header"><h3>Cadastrar Equipas em Lote</h3></div>
+          <div class="card-header"><h3>Registar Equipas em Lote</h3></div>
           <div class="row mb team-filters">
             <div class="col">
               <label>Modalidade</label>
@@ -132,9 +133,9 @@
             </label>
           </div>
           <div id="schoolsChecklist" class="schools-checklist">
-            <div class="empty">Carregando escolas...</div>
+            <div class="empty">A carregar escolas...</div>
           </div>
-          <button onclick="app.createBatchTeams()" style="width:100%; font-size:1.05rem; padding:14px;">Cadastrar Equipas</button>
+          <button onclick="app.createBatchTeams()" style="width:100%; font-size:1.05rem; padding:14px;">Registar Equipas</button>
         </div>
       </div>
 
@@ -174,6 +175,38 @@
           <div class="mt">
             <h4 class="mb">Chaveamento</h4>
             <div class="bracket-wrapper" id="tdBracket"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-generalStandings" class="view hidden">
+        <div class="card">
+          <div class="card-header">
+            <h3>🏆 Classificação Geral das Escolas</h3>
+            <button onclick="app.renderGeneralStandings()">Atualizar Tabela</button>
+          </div>
+          <p class="small mb">Pontuação cumulativa com base na classificação final das equipas nos torneios (Art. 33º e 34º).</p>
+          
+          <div class="table-responsive mt">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 60px; text-align: center;">Pos.</th>
+                  <th>Escola</th>
+                  <th style="text-align: center;">Pontos</th>
+                  <th style="text-align: center;">Medalhas (Desempate)</th>
+                </tr>
+              </thead>
+              <tbody id="generalStandingsTable">
+                </tbody>
+            </table>
+          </div>
+          
+          <div class="mt" style="background: #f9f9f9; padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent);">
+            <h4 style="font-size: 0.9rem; margin-bottom: 8px; color: #555;">Regras de Pontuação:</h4>
+            <p class="small" style="margin-bottom: 4px;"><strong>1º Lugar:</strong> 10 pts | <strong>2º Lugar:</strong> 7 pts | <strong>3º Lugar:</strong> 4 pts</p>
+            <p class="small" style="margin-bottom: 4px;"><strong>4º Lugar:</strong> 2 pts | <strong>5º ao 9º Lugar:</strong> 1 pt</p>
+            <p class="small"><em>Critérios de desempate:</em> Maior número de primeiros lugares, seguido de segundos lugares, etc.</p>
           </div>
         </div>
       </div>
