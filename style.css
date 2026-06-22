@@ -1,60 +1,117 @@
 :root {
-  --primary: #1b5e20;
-  --primary-dark: #2e7d32;
-  --accent: #ff6f00;
+  --primary: #0f5b2d; /* Verde bandeira da logo */
+  --primary-dark: #093b1d; /* Verde mais escuro para hovers */
+  --accent: #d4af37; /* Dourado da taça */
   --bg: #f4f6f8;
-  --sidebar: #1a237e;
+  --sidebar: #0f5b2d; /* Verde da logo na barra lateral */
   --text: #333;
   --card: #fff;
   --danger: #c62828;
 }
+
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 body { background: var(--bg); color: var(--text); }
+
+/* ============================================================
+   LOGIN E LOGOS
+   ============================================================ */
 .login-container {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 100vh; background: linear-gradient(135deg, #1a237e, #2e7d32);
+  min-height: 100vh; 
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary)); 
 }
+
 .login-box {
   background: white; padding: 40px; border-radius: 12px; width: 100%; max-width: 400px;
   box-shadow: 0 10px 40px rgba(0,0,0,0.3);
 }
+
+.login-logo {
+  width: 140px;
+  height: auto;
+  display: block;
+  margin: 0 auto 20px auto;
+}
+
 .login-box h1 { text-align: center; color: var(--sidebar); margin-bottom: 8px; font-size: 1.5rem; }
 .login-box p { text-align: center; color: #666; margin-bottom: 24px; font-size: 0.9rem; }
+
+/* ============================================================
+   ELEMENTOS GERAIS
+   ============================================================ */
 input, select {
   width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;
 }
+
 button {
   padding: 10px 20px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
   background: var(--primary); color: white;
 }
 button:hover { background: var(--primary-dark); transform: translateY(-1px); }
-button.accent { background: var(--accent); }
+button.accent { background: var(--accent); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
 button.danger { background: var(--danger); }
 button.secondary { background: #607d8b; color: white; }
 .login-box button, .modal button { width: 100%; margin-bottom: 12px; }
 .close-btn { background: #eee; color: #333; width: auto; padding: 6px 14px; font-weight: 700; }
 
+/* ============================================================
+   LAYOUT PRINCIPAL
+   ============================================================ */
 .app-shell { display: none; min-height: 100vh; }
+
 .sidebar {
   width: 260px; background: var(--sidebar); color: white; position: fixed;
-  height: 100vh; overflow-y: auto; padding: 20px 0;
+  height: 100vh; overflow-y: auto; padding: 0 0 20px 0;
 }
-.sidebar h2 { padding: 0 20px 20px; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 10px; }
+
+.sidebar-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30px 20px 20px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  margin-bottom: 10px;
+}
+
+.sidebar-logo {
+  width: 110px;
+  height: 110px;
+  background: white;
+  border-radius: 50%;
+  object-fit: contain;
+  padding: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  margin-bottom: 15px;
+}
+
+.sidebar h2 { font-size: 1.1rem; text-align: center; margin: 0; }
+
 .sidebar .nav-item {
   padding: 14px 20px; cursor: pointer; transition: background 0.2s;
   border-left: 4px solid transparent;
 }
 .sidebar .nav-item:hover, .sidebar .nav-item.active { background: rgba(255,255,255,0.1); border-left-color: var(--accent); }
+
 .main-content { margin-left: 260px; padding: 30px; }
+
+/* ============================================================
+   CARDS E TABELAS
+   ============================================================ */
 .card {
   background: var(--card); border-radius: 10px; padding: 24px; margin-bottom: 20px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
 .card h3 { color: var(--sidebar); margin-bottom: 8px; }
+
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
 th { color: #555; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; }
+td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
+
+/* ============================================================
+   BADGES (Etiquetas)
+   ============================================================ */
 .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; background: #e0e0e0; color: #555; }
 .badge.admin { background: #fff3e0; color: #e65100; }
 .badge.prof { background: #e3f2fd; color: #1565c0; }
@@ -64,8 +121,22 @@ th { color: #555; font-weight: 600; font-size: 0.85rem; text-transform: uppercas
 .badge.fem { background: #fce4ec; color: #c2185b; }
 .badge.futsal { background: #e0f2f1; color: #00695c; }
 .badge.queimada { background: #f3e5f5; color: #6a1b9a; }
+
+/* ============================================================
+   UTILITÁRIOS E GRID
+   ============================================================ */
 .row { display: flex; gap: 16px; flex-wrap: wrap; }
 .col { flex: 1; min-width: 200px; }
+.hidden { display: none !important; }
+.flex { display: flex; gap: 10px; }
+.flex-end { justify-content: flex-end; }
+.mt { margin-top: 12px; }
+.mb { margin-bottom: 12px; }
+.empty { text-align: center; color: #999; padding: 40px; }
+
+/* ============================================================
+   MODAIS
+   ============================================================ */
 .modal-overlay {
   display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
@@ -73,13 +144,17 @@ th { color: #555; font-weight: 600; font-size: 0.85rem; text-transform: uppercas
 .modal { background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .close-btn { background: #eee; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+
+/* ============================================================
+   CHAVEAMENTOS (BRACKETS)
+   ============================================================ */
 .match-card {
   background: #fafafa; border: 2px solid #e0e0e0; border-radius: 10px; padding: 16px;
   margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
 }
 .match-card.winner-bracket { border-left: 5px solid var(--primary); }
 .match-card.loser-bracket { border-left: 5px solid var(--accent); }
-.match-card.grand-final { border: 2px solid gold; background: #fffde7; }
+.match-card.grand-final { border: 2px solid var(--accent); background: #fffde7; }
 .match-teams { flex: 1; }
 .match-vs { font-weight: bold; color: #777; margin: 0 12px; }
 .winner { color: var(--primary); font-weight: bold; }
@@ -91,14 +166,10 @@ th { color: #555; font-weight: 600; font-size: 0.85rem; text-transform: uppercas
 .bracket-col { min-width: 260px; }
 .bracket-col .col-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; font-weight: 600; }
 .small { font-size: 0.85rem; color: #777; }
-.hidden { display: none !important; }
-.flex { display: flex; gap: 10px; }
-.flex-end { justify-content: flex-end; }
-.mt { margin-top: 12px; }
-.mb { margin-bottom: 12px; }
-.empty { text-align: center; color: #999; padding: 40px; }
-.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-right: 6px; }
 
+/* ============================================================
+   COMPONENTES ESPECÍFICOS
+   ============================================================ */
 .schools-checklist {
   border: 1px solid #ddd; border-radius: 8px; padding: 12px; max-height: 320px;
   overflow-y: auto; background: #fafafa; margin-bottom: 16px;
@@ -117,5 +188,4 @@ th { color: #555; font-weight: 600; font-size: 0.85rem; text-transform: uppercas
 .tournament-list-card h4 { margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
 .tournament-card-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 .tournament-card-actions button { padding: 6px 14px; font-size: 0.82rem; }
-
 td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
