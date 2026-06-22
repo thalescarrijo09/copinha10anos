@@ -20,7 +20,7 @@ const API_KEY = firebaseConfig.apiKey;
 const state = {
   currentUser: null, userRole: null,
   schools: [], professors: [], teams: [], tournaments: [],
-  currentTournament: null, currentTeam: null,
+  currentTournament: null, currentTeam: null, currentSquadTeam: null,
   profTeams: [], profTournaments: []
 };
 window.state = state;
@@ -162,7 +162,6 @@ function show(viewId) {
   const el = document.getElementById('view-' + viewId);
   if (el) el.classList.remove('hidden');
   
-  // Atualizações dinâmicas conforme a aba selecionada
   if (viewId === 'teams') { loadSchoolsForChecklist(); }
   if (viewId === 'tournaments') { renderTournamentsList(); }
   if (viewId === 'profTeams') { loadProfTeams(); }
@@ -478,13 +477,135 @@ async function deleteTournament(id) {
 }
 
 // ============================================================
+// MODAL DE SÚMULA / PLANTEL (CLIQUE NO CHAVEAMENTO)
+// ============================================================
+
+async function openTeamSquadModal(teamId) {
+  if (!teamId) return;
+  const tSnap = await getDoc(doc(db, 'teams', teamId));
+  if (!tSnap.exists()) return;
+  const team = { id: tSnap.id, ...tSnap.data() };
+  state.currentSquadTeam = team;
+
+  const isOwnerProfessor = state.userRole === 'professor' && state.currentUser && state.currentUser.schoolId === team.schoolId;
+  const isEditable = isOwnerProfessor;
+
+  let html = `
+    <div class="modal-header">
+      <h3 style="display:flex; align-items:center; gap:8px;">📋 Súmula / Plantel <span style="font-size:1rem; font-weight:normal; color:#666;">(${team.name})</span></h3>
+      <button class="close-btn" onclick="app.closeModal()">×</button>
+    </div>`;
+  
+  html += `<p class="small mb"><span class="badge ${team.modality}">${MODALITY_LABELS[team.modality]}</span> <span class="badge ${team.category}">${CATEGORY_LABELS[team.category]}</span> <span class="badge ${team.gender}">${GENDER_LABELS[team.gender]}</span></p>`;
+
+  if (isEditable) {
+    html += `
+      <div class="flex mb athlete-inputs mt">
+        <input type="text" id="squadAthleteName" placeholder="Nome do atleta">
+        <input type="number" id="squadAthleteNumber" placeholder="Nº">
+        <button onclick="app.addAthleteToSquad('${team.id}')">Adicionar</button>
+      </div>
+    `;
+  } else {
+    html += `<p class="small mb mt" style="color:var(--primary); font-weight:500;">Visualização de Plantel (Apenas leitura)</p>`;
+  }
+
+  html += `
+    <div class="table-responsive mt">
+      <table>
+        <thead><tr><th style="width: 50px; text-align:center;">Nº</th><th>Nome do Atleta</th>${isEditable ? '<th style="width: 80px;">Ações</th>' : ''}</tr></thead>
+        <tbody id="squadAthletesTable"></tbody>
+      </table>
+    </div>
+  `;
+
+  openModal(html);
+  renderSquadTable(team, isEditable);
+}
+
+function renderSquadTable(team, isEditable) {
+  const tbody = document.getElementById('squadAthletesTable');
+  if (!tbody) return;
+  const athletes = team.athletes || [];
+  if (athletes.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${isEditable ? 3 : 2}" class="empty">Nenhum atleta registado nesta equipa.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = athletes
+    .map((a, i) => ({ ...a, _idx: i }))
+    .sort((x, y) => (x.number || 0) - (y.number || 0))
+    .map(a => `
+      <tr>
+        <td style="text-align:center; font-weight:bold;">${a.number ?? '-'}</td>
+        <td>${a.name}</td>
+        ${isEditable ? `<td><button class="danger small-btn" style="padding:4px 8px; margin:0;" onclick="app.removeAthleteFromSquad('${team.id}', ${a._idx})">Excluir</button></td>` : ''}
+      </tr>`).join('');
+}
+
+async function addAthleteToSquad(teamId) {
+  const name = document.getElementById('squadAthleteName').value.trim();
+  const number = document.getElementById('squadAthleteNumber').value;
+  if (!name) return alert('Informe o nome do atleta.');
+
+  const team = state.currentSquadTeam;
+  if (!team || team.id !== teamId) return;
+
+  const athletes = team.athletes ? [...team.athletes] : [];
+  athletes.push({ name, number: number ? parseInt(number) : null });
+
+  await updateDoc(doc(db, 'teams', teamId), { athletes });
+  team.athletes = athletes;
+
+  const tIdx = state.teams.findIndex(t => t.id === teamId);
+  if(tIdx > -1) state.teams[tIdx].athletes = athletes;
+  const ptIdx = state.profTeams.findIndex(t => t.id === teamId);
+  if(ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
+
+  document.getElementById('squadAthleteName').value = '';
+  document.getElementById('squadAthleteNumber').value = '';
+  renderSquadTable(team, true);
+
+  if (state.currentTeam && state.currentTeam.id === teamId) {
+    state.currentTeam.athletes = athletes;
+    if(document.getElementById('athletesTable')) renderAthletes();
+  }
+}
+
+async function removeAthleteFromSquad(teamId, idx) {
+  if (!confirm('Remover este atleta?')) return;
+  const team = state.currentSquadTeam;
+  if (!team || team.id !== teamId) return;
+
+  const athletes = (team.athletes || []).filter((_, i) => i !== idx);
+  await updateDoc(doc(db, 'teams', teamId), { athletes });
+  team.athletes = athletes;
+
+  const tIdx = state.teams.findIndex(t => t.id === teamId);
+  if(tIdx > -1) state.teams[tIdx].athletes = athletes;
+  const ptIdx = state.profTeams.findIndex(t => t.id === teamId);
+  if(ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
+
+  renderSquadTable(team, true);
+
+  if (state.currentTeam && state.currentTeam.id === teamId) {
+    state.currentTeam.athletes = athletes;
+    if(document.getElementById('athletesTable')) renderAthletes();
+  }
+}
+
+// ============================================================
 // CHAVEAMENTO DUPLA ELIMINAÇÃO
 // ============================================================
 
-function teamName(id) {
+function teamNameClickable(id) {
   if (!id) return '<span class="bye">—</span>';
   const t = state.teams.find(x => x.id === id);
-  return t ? t.name : 'Time';
+  const name = t ? t.name : 'Equipa';
+  return `<span style="cursor:pointer; display:inline-flex; align-items:center; gap:4px; color:var(--primary); transition:opacity 0.2s;" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" onclick="app.openTeamSquadModal('${id}')" title="Ver Súmula / Plantel">
+    <span style="font-size:0.85rem;">📋</span> 
+    <span style="text-decoration:underline; text-decoration-color:#b0bec5; text-underline-offset:3px;">${name}</span>
+  </span>`;
 }
 
 function matchById(map, id) {
@@ -535,7 +656,7 @@ function renderMatchCardDE(map, m, seeds, results, readOnly, tournamentId) {
   const sideHtml = (info, idx, score) => {
     const isWin = winnerIdx === idx;
     const label = info.decided
-      ? `<span class="team-name ${isWin ? 'winner' : ''}">${teamName(info.teamId)}</span>`
+      ? `<span class="team-name ${isWin ? 'winner' : ''}">${teamNameClickable(info.teamId)}</span>`
       : `<span class="pending-feed">${info.feedLabel}</span>`;
     
     const inputHtml = canEdit 
@@ -635,7 +756,7 @@ async function shuffleTournamentTeams() {
   tournament.teamIds = shuffled;
   await updateDoc(doc(db, 'tournaments', tournament.id), { teamIds: shuffled, updatedAt: new Date().toISOString() });
   renderTournamentDetail(tournament);
-  alert('Ordem dos times embaralhada!');
+  alert('Ordem das equipas embaralhada!');
 }
 
 async function startTournament() {
@@ -822,7 +943,7 @@ function renderStandings(tournament, containerId) {
     html += `
       <div class="standing-item ${extraClass}">
         <div class="standing-pos">${medal} ${item.pos}</div>
-        <div class="standing-team">${teamName(item.teamId)}</div>
+        <div class="standing-team">${teamNameClickable(item.teamId)}</div>
       </div>
     `;
   });
@@ -833,7 +954,7 @@ function renderStandings(tournament, containerId) {
 }
 
 // ============================================================
-// NOVO: CLASSIFICAÇÃO GERAL DAS ESCOLAS
+// CLASSIFICAÇÃO GERAL DAS ESCOLAS
 // ============================================================
 function renderGeneralStandings() {
   const tbody = document.getElementById('generalStandingsTable');
@@ -841,17 +962,13 @@ function renderGeneralStandings() {
 
   const schoolStats = {};
   
-  // 1. Inicializa o contador de pontos e desempates para cada escola
   state.schools.forEach(s => {
     schoolStats[s.id] = {
-      id: s.id,
-      name: s.name,
-      points: 0,
+      id: s.id, name: s.name, points: 0,
       places: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
     };
   });
 
-  // 2. Analisa todos os torneios finalizados
   state.tournaments.filter(t => t.status === 'finished').forEach(tournament => {
     const standings = calculateStandings(tournament);
     
@@ -861,33 +978,29 @@ function renderGeneralStandings() {
       const schoolId = team.schoolId;
       if (!schoolStats[schoolId]) return;
 
-      // Extrai o número da posição (ex: '5º - 6º Lugar' vira o número 5)
       let posNum = parseInt(item.pos); 
       
-      // Pontuação Oficial
       if (posNum === 1) schoolStats[schoolId].points += 10;
       else if (posNum === 2) schoolStats[schoolId].points += 7;
       else if (posNum === 3) schoolStats[schoolId].points += 4;
       else if (posNum === 4) schoolStats[schoolId].points += 2;
       else if (posNum >= 5 && posNum <= 9) schoolStats[schoolId].points += 1;
       
-      // Critério de Desempate: regista o número de ouros, pratas, etc. (até ao 6º lugar)
       if (posNum >= 1 && posNum <= 6) {
         schoolStats[schoolId].places[posNum] += 1;
       }
     });
   });
 
-  // 3. Ordena as escolas com base na Matemática do Art. 34º
   const sortedSchools = Object.values(schoolStats).sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;             // Mais pontos globais
-    if (b.places[1] !== a.places[1]) return b.places[1] - a.places[1]; // Desempate 1: Mais 1º lugares
-    if (b.places[2] !== a.places[2]) return b.places[2] - a.places[2]; // Desempate 2: Mais 2º lugares
-    if (b.places[3] !== a.places[3]) return b.places[3] - a.places[3]; // Desempate 3: Mais 3º lugares
-    if (b.places[4] !== a.places[4]) return b.places[4] - a.places[4]; // Desempate 4: Mais 4º lugares
-    if (b.places[5] !== a.places[5]) return b.places[5] - a.places[5]; // Desempate 5: Mais 5º lugares
-    if (b.places[6] !== a.places[6]) return b.places[6] - a.places[6]; // Desempate 6: Mais 6º lugares
-    return a.name.localeCompare(b.name); // Empate Absoluto - Ordem alfabética aguardando Sorteio
+    if (b.points !== a.points) return b.points - a.points;             
+    if (b.places[1] !== a.places[1]) return b.places[1] - a.places[1]; 
+    if (b.places[2] !== a.places[2]) return b.places[2] - a.places[2]; 
+    if (b.places[3] !== a.places[3]) return b.places[3] - a.places[3]; 
+    if (b.places[4] !== a.places[4]) return b.places[4] - a.places[4]; 
+    if (b.places[5] !== a.places[5]) return b.places[5] - a.places[5]; 
+    if (b.places[6] !== a.places[6]) return b.places[6] - a.places[6]; 
+    return a.name.localeCompare(b.name); 
   });
 
   if (sortedSchools.length === 0) {
@@ -895,7 +1008,6 @@ function renderGeneralStandings() {
     return;
   }
 
-  // 4. Desenha a tabela
   tbody.innerHTML = sortedSchools.map((s, index) => {
     let medal = '';
     let extraStyle = '';
@@ -916,7 +1028,7 @@ function renderGeneralStandings() {
 
 
 // ============================================================
-// ÁREA DO PROFESSOR
+// ÁREA DO PROFESSOR (Gestão Geral e Histórico)
 // ============================================================
 
 async function loadProfTeams() {
@@ -928,7 +1040,7 @@ async function loadProfTeams() {
 function renderProfTeams() {
   const container = document.getElementById('profTeamsList');
   const teams = state.profTeams || [];
-  if (teams.length === 0) { container.innerHTML = '<div class="empty">Nenhum time para sua escola.</div>'; return; }
+  if (teams.length === 0) { container.innerHTML = '<div class="empty">Nenhuma equipa para a sua escola.</div>'; return; }
   container.innerHTML = teams.map(t => `
     <div class="card" style="cursor:pointer;" onclick="app.openAthletes('${t.id}')">
       <h4>${t.name}</h4>
@@ -958,7 +1070,7 @@ function renderAthletes() {
   const team = state.currentTeam;
   const tbody = document.getElementById('athletesTable');
   const athletes = (team && team.athletes) ? team.athletes : [];
-  if (athletes.length === 0) { tbody.innerHTML = '<tr><td colspan="3" class="empty">Nenhum atleta cadastrado.</td></tr>'; return; }
+  if (athletes.length === 0) { tbody.innerHTML = '<tr><td colspan="3" class="empty">Nenhum atleta registado.</td></tr>'; return; }
   tbody.innerHTML = athletes
     .map((a, i) => ({ ...a, _idx: i }))
     .sort((x, y) => (x.number || 0) - (y.number || 0))
@@ -1010,7 +1122,7 @@ function renderProfTournaments() {
   container.innerHTML = list.map(t => `
     <div class="card tournament-list-card" style="cursor:pointer;" onclick="app.openProfTournamentDetail('${t.id}')">
       <h4><span class="badge ${t.modality}">${MODALITY_LABELS[t.modality]}</span> ${t.name}</h4>
-      <p class="small">${(t.teamIds || []).length} times · <span class="badge" style="text-transform:capitalize; background:#fff3e0; color:#e65100;">${statusToLabel(t.status)}</span></p>
+      <p class="small">${(t.teamIds || []).length} equipas · <span class="badge" style="text-transform:capitalize; background:#fff3e0; color:#e65100;">${statusToLabel(t.status)}</span></p>
     </div>`).join('');
 }
 
@@ -1039,6 +1151,7 @@ function toggleSidebar() {
   if (overlay) overlay.classList.toggle('active');
 }
 
+// Exportações Globais
 window.app = {
   login, logout, show,
   openSchoolModal, saveSchool, deleteSchool,
@@ -1048,6 +1161,7 @@ window.app = {
   openManageTeamsModal, saveTournamentTeams, deleteTournament,
   shuffleTournamentTeams, startTournament,
   saveInlineResultDE, undoMatchResultDE,
+  openTeamSquadModal, addAthleteToSquad, removeAthleteFromSquad, 
   closeModal,
   openAthletes, addAthlete, removeAthlete,
   loadProfTournaments, openProfTournamentDetail, toggleSidebar,
