@@ -27,7 +27,7 @@ body { background: var(--bg); color: var(--text); }
 }
 
 .login-logo {
-  width: 220px;
+  width: 1500px;
   height: auto;
   display: block;
   margin: 0 auto 20px auto;
@@ -74,7 +74,7 @@ button.secondary { background: #607d8b; color: white; }
 }
 
 .sidebar-logo {
-  width: 130px;
+  width: 90px;
   height: 130px;
   background: white;
   border-radius: 50%;
