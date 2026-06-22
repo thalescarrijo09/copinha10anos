@@ -32,12 +32,12 @@
         <div class="nav-item" onclick="app.show('dashboard')">Dashboard</div>
         <div class="nav-item" onclick="app.show('schools')">Escolas</div>
         <div class="nav-item" onclick="app.show('professors')">Professores</div>
-        <div class="nav-item" onclick="app.show('teams')">Equipas</div>
+        <div class="nav-item" onclick="app.show('teams')">Equipes</div>
         <div class="nav-item" onclick="app.show('tournaments')">Torneios e Tabelas</div>
         <div class="nav-item" onclick="app.show('generalStandings')" style="color: var(--accent); font-weight: bold;">🏆 Classificação Geral</div>
       </div>
       <div id="navProfessor" class="hidden">
-        <div class="nav-item" onclick="app.show('profTeams')">As Minhas Equipas</div>
+        <div class="nav-item" onclick="app.show('profTeams')">As Minhas Equipes</div>
         <div class="nav-item" onclick="app.show('profTournaments')">Torneios e Tabelas</div>
       </div>
       <div class="nav-item" style="margin-top: 40px; border-top: 1px solid rgba(0,0,0,0.1); color: #ffcc80;" onclick="app.logout()">
@@ -60,7 +60,7 @@
         <div class="row dashboard-cards">
           <div class="col card"><h3 id="dashSchools">0</h3><p class="small">Escolas registadas</p></div>
           <div class="col card"><h3 id="dashProfessors">0</h3><p class="small">Professores</p></div>
-          <div class="col card"><h3 id="dashTeams">0</h3><p class="small">Equipas</p></div>
+          <div class="col card"><h3 id="dashTeams">0</h3><p class="small">Equipes</p></div>
           <div class="col card"><h3 id="dashTournaments">0</h3><p class="small">Torneios</p></div>
         </div>
       </div>
@@ -98,7 +98,7 @@
 
       <div id="view-teams" class="view hidden">
         <div class="card">
-          <div class="card-header"><h3>Registar Equipas em Lote</h3></div>
+          <div class="card-header"><h3>Registar Equipes em Lote</h3></div>
           <div class="row mb team-filters">
             <div class="col">
               <label>Modalidade</label>
@@ -135,7 +135,7 @@
           <div id="schoolsChecklist" class="schools-checklist">
             <div class="empty">A carregar escolas...</div>
           </div>
-          <button onclick="app.createBatchTeams()" style="width:100%; font-size:1.05rem; padding:14px;">Registar Equipas</button>
+          <button onclick="app.createBatchTeams()" style="width:100%; font-size:1.05rem; padding:14px;">Registar Equipes</button>
         </div>
       </div>
 
@@ -157,12 +157,12 @@
           </div>
           <div class="tournament-actions">
             <button class="secondary" onclick="app.openEditTournamentModal(state.currentTournament.id)">✏️ Nome</button>
-            <button class="secondary" onclick="app.openManageTeamsModal(state.currentTournament.id)">👥 Equipas</button>
+            <button class="secondary" onclick="app.openManageTeamsModal(state.currentTournament.id)">👥 Equipes</button>
             <button class="danger" onclick="app.deleteTournament(state.currentTournament.id)">🗑️ Excluir</button>
           </div>
           <div id="tdTeams"></div>
           <div class="mt">
-            <h4 class="mb">Equipas Participantes</h4>
+            <h4 class="mb">Equipes Participantes</h4>
             <div id="tdTeamsList"></div>
           </div>
           <div id="tournamentActionButtons" class="tournament-actions hidden">
@@ -185,7 +185,7 @@
             <h3>🏆 Classificação Geral das Escolas</h3>
             <button onclick="app.renderGeneralStandings()">Atualizar Tabela</button>
           </div>
-          <p class="small mb">Pontuação cumulativa com base na classificação final das equipas nos torneios (Art. 33º e 34º).</p>
+          <p class="small mb">Pontuação cumulativa com base na classificação final das equipes nos torneios (Art. 33º e 34º).</p>
           
           <div class="table-responsive mt">
             <table>
@@ -213,7 +213,7 @@
 
       <div id="view-profTeams" class="view hidden">
         <div class="card">
-          <h3>As Minhas Equipas</h3>
+          <h3>As Minhas Equipes</h3>
           <div id="profTeamsList"></div>
         </div>
       </div>
