@@ -208,6 +208,20 @@ input.inline-score {
 .bracket-col { min-width: 280px; }
 .bracket-col .col-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; font-weight: 600; }
 
+
+/* ============================================================
+   CLASSIFICAÇÃO FINAL (NOVO)
+   ============================================================ */
+.standings-box { background: #fffde7; border: 2px solid var(--accent); border-radius: 10px; padding: 20px; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+.standings-list { display: flex; flex-direction: column; gap: 8px; }
+.standing-item { display: flex; align-items: center; padding: 12px 16px; background: white; border-radius: 8px; border: 1px solid #eee; }
+.standing-item.first-place { background: linear-gradient(to right, #fffdf0, #fff); border-left: 5px solid #ffd700; font-size: 1.1rem; font-weight: bold; }
+.standing-item.second-place { background: linear-gradient(to right, #f8f9fa, #fff); border-left: 5px solid #c0c0c0; font-weight: bold; }
+.standing-item.third-place { background: linear-gradient(to right, #fff5e6, #fff); border-left: 5px solid #cd7f32; font-weight: bold; }
+.standing-item.other-place { border-left: 5px solid #ddd; }
+.standing-pos { width: 140px; color: #555; }
+.standing-team { flex: 1; color: var(--sidebar); }
+
 /* ============================================================
    OUTROS ESTILOS
    ============================================================ */
