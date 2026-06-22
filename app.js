@@ -818,7 +818,7 @@ async function saveInlineResultDE(tournamentId, jogoId) {
   const scoreBInput = document.getElementById(`match_${jogoId}_score1`);
   
   if (!scoreAInput || !scoreBInput || scoreAInput.value === '' || scoreBInput.value === '') {
-    return alert('Preencha o placar das duas equipas antes de salvar.');
+    return alert('Preencha o placar das duas equipes antes de salvar.');
   }
 
   const scoreA = parseInt(scoreAInput.value);
