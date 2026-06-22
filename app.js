@@ -165,6 +165,13 @@ function show(viewId) {
   if (viewId === 'tournaments') { renderTournamentsList(); }
   if (viewId === 'profTeams') { loadProfTeams(); }
   if (viewId === 'profTournaments') { loadProfTournaments(); }
+  
+  // Fecha o menu mobile automaticamente ao clicar em um link
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.querySelector('.sidebar-overlay');
+  if(sidebar && sidebar.classList.contains('active')) {
+    toggleSidebar();
+  }
 }
 
 async function login() {
@@ -315,7 +322,10 @@ async function createBatchTeams() {
     const schoolId = cb.value;
     const school = state.schools.find(s => s.id === schoolId);
     const schoolName = school ? school.name : 'Escola';
-    const teamName = `${schoolName} - ${MODALITY_LABELS[modality]} ${GENDER_LABELS[gender]} ${CATEGORY_LABELS[category]}`;
+    
+    // NOME ALTERADO AQUI: Apenas o nome da escola, melhorando a responsividade
+    const teamName = schoolName; 
+    
     const teamRef = doc(collection(db, 'teams'));
     batch.set(teamRef, { name: teamName, schoolId, modality, category, gender, tournamentId, createdAt: new Date().toISOString(), athletes: [] });
     newTeamIds.push(teamRef.id);
@@ -743,7 +753,6 @@ function openAthletes(teamId) {
   show('profAthletes');
 }
 
-/* === RECONSTRUÍDO === */
 function renderAthletes() {
   const team = state.currentTeam;
   const tbody = document.getElementById('athletesTable');
@@ -760,7 +769,6 @@ function renderAthletes() {
       </tr>`).join('');
 }
 
-/* === RECONSTRUÍDO === */
 async function addAthlete() {
   const name = document.getElementById('athleteName').value.trim();
   const number = document.getElementById('athleteNumber').value;
@@ -776,7 +784,6 @@ async function addAthlete() {
   renderAthletes();
 }
 
-/* === RECONSTRUÍDO === */
 async function removeAthlete(idx) {
   const team = state.currentTeam;
   if (!team) return;
@@ -787,17 +794,14 @@ async function removeAthlete(idx) {
   renderAthletes();
 }
 
-/* === RECONSTRUÍDO === */
 async function loadProfTournaments() {
   const snap = await getDocs(collection(db, 'tournaments'));
   const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  // garante que os times estejam carregados para resolver nomes no chaveamento
   if (state.teams.length === 0) await loadTeams();
   state.profTournaments = all;
   renderProfTournaments();
 }
 
-/* === RECONSTRUÍDO === */
 function renderProfTournaments() {
   const container = document.getElementById('profTournamentsList');
   const list = state.profTournaments || [];
@@ -809,7 +813,6 @@ function renderProfTournaments() {
     </div>`).join('');
 }
 
-/* === RECONSTRUÍDO === */
 async function openProfTournamentDetail(id) {
   const snap = await getDoc(doc(db, 'tournaments', id));
   if (!snap.exists()) return;
@@ -822,9 +825,16 @@ async function openProfTournamentDetail(id) {
     <span class="badge ${tournament.category}">${CATEGORY_LABELS[tournament.category]}</span>
     <span class="badge ${tournament.gender}">${GENDER_LABELS[tournament.gender]}</span>
     <span class="badge" style="text-transform:capitalize; margin-left:6px;">${statusToLabel(tournament.status)}</span>`;
-  // readOnly = true: professor só visualiza
   renderBracketDE(tournament, 'ptdBracket', true);
   show('profTournament-detail');
+}
+
+// FUNÇÃO PARA O MENU RESPONSIVO MOBILE
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.querySelector('.sidebar-overlay');
+  if (sidebar) sidebar.classList.toggle('active');
+  if (overlay) overlay.classList.toggle('active');
 }
 
 // ============================================================
@@ -841,5 +851,6 @@ window.app = {
   openMatchModalDE, saveMatchResultDE,
   closeModal,
   openAthletes, addAthlete, removeAthlete,
-  loadProfTournaments, openProfTournamentDetail
+  loadProfTournaments, openProfTournamentDetail,
+  toggleSidebar // Exportada para ser usada no HTML do celular
 };
