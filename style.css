@@ -153,23 +153,32 @@ td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
 /* ============================================================
    CHAVEAMENTOS (BRACKETS)
    ============================================================ */
+/* ============================================================
+   CHAVEAMENTOS (BRACKETS)
+   ============================================================ */
 .bracket-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 10px; }
 .match-card {
   background: #fafafa; border: 2px solid #e0e0e0; border-radius: 10px; padding: 14px;
-  margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px; display: flex; justify-content: space-between; align-items: stretch;
 }
 .match-card.winner-bracket { border-left: 5px solid var(--primary); }
 .match-card.loser-bracket { border-left: 5px solid var(--accent); }
 .match-card.grand-final { border: 2px solid var(--accent); background: #fffde7; }
-.match-teams { flex: 1; margin-right: 10px; }
-.match-vs { font-weight: bold; color: #777; margin: 0 12px; }
+.match-teams { flex: 1; display: flex; flex-direction: column; }
+.match-side { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 28px; }
+.team-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; font-weight: 500; }
+.inline-score { width: 45px !important; padding: 4px !important; margin: 0 !important; text-align: center; font-weight: bold; border: 1px solid #ccc; border-radius: 4px; }
+.score-display { display: inline-block; width: 45px; text-align: center; font-weight: bold; background: #e0e0e0; padding: 4px; border-radius: 4px; color: #333; }
+.match-actions { display: flex; align-items: center; justify-content: center; margin-left: 12px; padding-left: 12px; border-left: 1px solid #eee; }
+.small-btn { padding: 6px 12px; font-size: 0.8rem; margin: 0; width: auto; }
+.match-vs { font-size: 0.7rem; color: #aaa; margin: 4px 0; font-weight: bold; }
 .winner { color: var(--primary); font-weight: bold; }
 .bye { color: #999; font-style: italic; }
 .pending-feed { color: #999; font-style: italic; }
 .bracket-round { margin-bottom: 30px; }
 .bracket-round h4 { margin-bottom: 12px; color: #444; }
 .bracket-cols { display: flex; gap: 30px; }
-.bracket-col { min-width: 250px; }
+.bracket-col { min-width: 260px; }
 .bracket-col .col-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; font-weight: 600; }
 
 .schools-checklist { border: 1px solid #ddd; border-radius: 8px; padding: 12px; max-height: 320px; overflow-y: auto; background: #fafafa; margin-bottom: 16px; }
