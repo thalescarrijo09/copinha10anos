@@ -101,7 +101,7 @@ button.secondary { background: #607d8b; color: white; }
 .mobile-header { display: none; }
 
 /* ============================================================
-   CARDS E TABELAS
+   CARTÕES E TABELAS
    ============================================================ */
 .card {
   background: var(--card); border-radius: 10px; padding: 24px; margin-bottom: 20px;
@@ -110,15 +110,17 @@ button.secondary { background: #607d8b; color: white; }
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
 .card h3 { color: var(--sidebar); margin-bottom: 8px; }
 
-/* Adicionado contêiner responsivo para tabelas */
 .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 table { width: 100%; border-collapse: collapse; min-width: 500px; }
 th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
 th { color: #555; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; }
 td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
 
+/* Tabela Específica para a Classificação Geral */
+#generalStandingsTable td { vertical-align: middle; }
+
 /* ============================================================
-   BADGES E COMPONENTES
+   ETIQUETAS (BADGES) E UTILITÁRIOS
    ============================================================ */
 .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; background: #e0e0e0; color: #555; }
 .badge.admin { background: #fff3e0; color: #e65100; }
@@ -138,6 +140,7 @@ td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
 .mt { margin-top: 12px; }
 .mb { margin-bottom: 12px; }
 .empty { text-align: center; color: #999; padding: 40px; }
+.small { font-size: 0.85rem; color: #777; }
 
 /* ============================================================
    MODAIS
@@ -151,7 +154,7 @@ td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
 .close-btn { background: #eee; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
 
 /* ============================================================
-   CHAVEAMENTOS (BRACKETS) - CORRIGIDO PLACAR INLINE
+   CHAVEAMENTOS (BRACKETS) - COM PLACAR INLINE
    ============================================================ */
 .bracket-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 10px; }
 .match-card {
@@ -167,7 +170,7 @@ td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
 
 .team-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; font-weight: 500; font-size: 0.95rem; }
 
-/* Força o input do placar a ser pequeno e ficar na linha */
+/* Placar pequeno na linha */
 input.inline-score { 
   width: 50px !important; 
   min-width: 50px !important;
@@ -181,7 +184,7 @@ input.inline-score {
   border-radius: 4px; 
 }
 
-/* Placar salvo - Super Negrito */
+/* Placar salvo em negrito */
 .score-display { 
   display: inline-block; 
   width: 50px; 
@@ -208,9 +211,8 @@ input.inline-score {
 .bracket-col { min-width: 280px; }
 .bracket-col .col-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; font-weight: 600; }
 
-
 /* ============================================================
-   CLASSIFICAÇÃO FINAL (NOVO)
+   CLASSIFICAÇÃO FINAL DOS TORNEIOS
    ============================================================ */
 .standings-box { background: #fffde7; border: 2px solid var(--accent); border-radius: 10px; padding: 20px; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 .standings-list { display: flex; flex-direction: column; gap: 8px; }
@@ -223,7 +225,7 @@ input.inline-score {
 .standing-team { flex: 1; color: var(--sidebar); }
 
 /* ============================================================
-   OUTROS ESTILOS
+   LISTAS E CHECKBOXES
    ============================================================ */
 .schools-checklist { border: 1px solid #ddd; border-radius: 8px; padding: 12px; max-height: 320px; overflow-y: auto; background: #fafafa; margin-bottom: 16px; }
 .school-check-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eee; }
@@ -239,11 +241,11 @@ input.inline-score {
 .tournament-card-actions button { padding: 6px 14px; font-size: 0.82rem; }
 
 /* ============================================================
-   📱 RESPONSIVIDADE (MOBILE / CELULARES)
+   📱 RESPONSIVIDADE (TELEMÓVEIS)
    ============================================================ */
 @media (max-width: 768px) {
   
-  /* Esconde a barra lateral para fora da tela */
+  /* Esconde a barra lateral para fora do ecrã */
   .sidebar { transform: translateX(-100%); }
   
   /* Classe que o JavaScript adiciona para mostrar a barra */
@@ -256,11 +258,11 @@ input.inline-score {
   }
   .sidebar-overlay.active { display: block; }
   
-  /* Tira o espaço da barra lateral do conteúdo principal e reduz espaçamentos */
+  /* Ajusta o espaço da área principal */
   .main-content { margin-left: 0; padding: 15px; }
   .card { padding: 15px; }
   
-  /* Cabeçalho superior com botão hambúrguer (☰) */
+  /* Cabeçalho superior visível apenas no mobile */
   .mobile-header {
     display: flex; align-items: center; gap: 15px;
     background: var(--primary); color: white;
@@ -275,11 +277,11 @@ input.inline-score {
   }
   .mobile-title { font-size: 1.1rem; font-weight: bold; color: var(--accent); }
   
-  /* Empilha os inputs e botões caso fiquem apertados */
+  /* Empilha inputs */
   .athlete-inputs { flex-direction: column; }
   .athlete-inputs input, .athlete-inputs button { width: 100%; }
   
-  /* Mantém as linhas dos times arrumadas, mas empilha o botão "Salvar" no mobile */
+  /* Ajustes dos jogos no telemóvel */
   .match-card { flex-direction: column; align-items: stretch; gap: 12px; }
   .match-actions { padding-left: 0; border-left: none; width: 100%; }
   .match-actions button { width: 100%; }
