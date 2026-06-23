@@ -96,12 +96,11 @@ button.secondary { background: #607d8b; color: white; }
 
 .main-content { margin-left: 260px; padding: 30px; transition: margin-left 0.3s ease; }
 
-/* Overlay escuro e Cabeçalho Mobile - Escondidos no Desktop */
 .sidebar-overlay { display: none; }
 .mobile-header { display: none; }
 
 /* ============================================================
-   CARTÕES E TABELAS
+   CARDS E TABELAS
    ============================================================ */
 .card {
   background: var(--card); border-radius: 10px; padding: 24px; margin-bottom: 20px;
@@ -115,12 +114,10 @@ table { width: 100%; border-collapse: collapse; min-width: 500px; }
 th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
 th { color: #555; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; }
 td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
-
-/* Tabela Específica para a Classificação Geral */
 #generalStandingsTable td { vertical-align: middle; }
 
 /* ============================================================
-   ETIQUETAS (BADGES) E UTILITÁRIOS
+   BADGES E COMPONENTES
    ============================================================ */
 .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; background: #e0e0e0; color: #555; }
 .badge.admin { background: #fff3e0; color: #e65100; }
@@ -143,18 +140,43 @@ td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
 .small { font-size: 0.85rem; color: #777; }
 
 /* ============================================================
-   MODAIS
+   MODAIS E SÚMULA ONLINE
    ============================================================ */
 .modal-overlay {
   display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;
 }
-.modal { background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+.modal { background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; transition: max-width 0.3s ease;}
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .close-btn { background: #eee; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
 
+/* Adicionado para a Súmula (Tela Larga) */
+.modal.modal-wide { max-width: 95vw; height: 90vh; display: flex; flex-direction: column; }
+.sumula-container { display: flex; gap: 20px; flex: 1; overflow-y: hidden; }
+.sumula-team { flex: 1; background: #fafafa; border: 1px solid #eee; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+.sumula-team h4 { padding: 12px; background: #e0e0e0; color: #333; text-align: center; margin: 0; border-bottom: 2px solid #ccc; font-size: 1.1rem; }
+.sumula-team.team-a h4 { border-bottom-color: var(--primary); }
+.sumula-team.team-b h4 { border-bottom-color: var(--accent); }
+.sumula-table-wrapper { flex: 1; overflow-y: auto; }
+.sumula-table { width: 100%; border-collapse: collapse; min-width: 100%; }
+.sumula-table th { background: #f0f0f0; font-size: 0.75rem; position: sticky; top: 0; z-index: 10; padding: 8px; }
+.sumula-table td { padding: 8px; vertical-align: middle; border-bottom: 1px solid #ddd; font-size: 0.9rem; }
+.sumula-table tr:hover { background: #f5f5f5; }
+
+.action-btn { background: #eee; border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; font-size: 1rem; cursor: pointer; color: #333; display: inline-flex; align-items: center; justify-content: center; min-width: 32px; font-weight: bold; }
+.action-btn:hover { background: #ddd; }
+.action-btn.active-yellow { background: #ffeb3b; border-color: #fbc02d; }
+.action-btn.active-red { background: #f44336; border-color: #d32f2f; color: white; }
+.action-btn.active-burn { background: #ff5722; color: white; border-color: #e64a19; }
+.action-btn.active-base { background: #2196f3; color: white; border-color: #1976d2; }
+
+.sumula-scoreboard { text-align: center; font-size: 2.5rem; font-weight: 900; color: var(--sidebar); margin-bottom: 15px; letter-spacing: 2px; }
+.sumula-scoreboard span { padding: 0 15px; }
+.sumula-scoreboard .vs { font-size: 1.5rem; color: #999; }
+.sumula-footer { border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px; text-align: right; }
+
 /* ============================================================
-   CHAVEAMENTOS (BRACKETS) - COM PLACAR INLINE
+   CHAVEAMENTOS (BRACKETS)
    ============================================================ */
 .bracket-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 10px; }
 .match-card {
@@ -167,10 +189,8 @@ td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
 
 .match-teams { flex: 1; display: flex; flex-direction: column; gap: 8px; }
 .match-side { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-
 .team-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; font-weight: 500; font-size: 0.95rem; }
 
-/* Placar pequeno na linha */
 input.inline-score { 
   width: 50px !important; 
   min-width: 50px !important;
@@ -183,8 +203,6 @@ input.inline-score {
   border: 1px solid #ccc; 
   border-radius: 4px; 
 }
-
-/* Placar salvo em negrito */
 .score-display { 
   display: inline-block; 
   width: 50px; 
@@ -212,7 +230,7 @@ input.inline-score {
 .bracket-col .col-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; font-weight: 600; }
 
 /* ============================================================
-   CLASSIFICAÇÃO FINAL DOS TORNEIOS
+   CLASSIFICAÇÃO FINAL
    ============================================================ */
 .standings-box { background: #fffde7; border: 2px solid var(--accent); border-radius: 10px; padding: 20px; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 .standings-list { display: flex; flex-direction: column; gap: 8px; }
@@ -224,9 +242,6 @@ input.inline-score {
 .standing-pos { width: 140px; color: #555; }
 .standing-team { flex: 1; color: var(--sidebar); }
 
-/* ============================================================
-   LISTAS E CHECKBOXES
-   ============================================================ */
 .schools-checklist { border: 1px solid #ddd; border-radius: 8px; padding: 12px; max-height: 320px; overflow-y: auto; background: #fafafa; margin-bottom: 16px; }
 .school-check-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eee; }
 .school-check-item:last-child { border-bottom: none; }
@@ -241,28 +256,16 @@ input.inline-score {
 .tournament-card-actions button { padding: 6px 14px; font-size: 0.82rem; }
 
 /* ============================================================
-   📱 RESPONSIVIDADE (TELEMÓVEIS)
+   📱 RESPONSIVIDADE (MOBILE / CELULARES)
    ============================================================ */
 @media (max-width: 768px) {
-  
-  /* Esconde a barra lateral para fora do ecrã */
   .sidebar { transform: translateX(-100%); }
-  
-  /* Classe que o JavaScript adiciona para mostrar a barra */
   .sidebar.active { transform: translateX(0); box-shadow: 2px 0 15px rgba(0,0,0,0.3); }
-  
-  /* Fundo escuro clicável atrás do menu */
-  .sidebar-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5); z-index: 990;
-  }
+  .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 990; }
   .sidebar-overlay.active { display: block; }
-  
-  /* Ajusta o espaço da área principal */
   .main-content { margin-left: 0; padding: 15px; }
   .card { padding: 15px; }
   
-  /* Cabeçalho superior visível apenas no mobile */
   .mobile-header {
     display: flex; align-items: center; gap: 15px;
     background: var(--primary); color: white;
@@ -270,19 +273,17 @@ input.inline-score {
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     border-radius: 0 0 10px 10px;
   }
-  .menu-btn {
-    background: transparent; border: 1px solid rgba(255,255,255,0.4); 
-    color: white; padding: 6px 12px; font-size: 1.1rem; border-radius: 6px;
-    margin: 0; width: auto;
-  }
+  .menu-btn { background: transparent; border: 1px solid rgba(255,255,255,0.4); color: white; padding: 6px 12px; font-size: 1.1rem; border-radius: 6px; margin: 0; width: auto; }
   .mobile-title { font-size: 1.1rem; font-weight: bold; color: var(--accent); }
   
-  /* Empilha inputs */
   .athlete-inputs { flex-direction: column; }
   .athlete-inputs input, .athlete-inputs button { width: 100%; }
   
-  /* Ajustes dos jogos no telemóvel */
   .match-card { flex-direction: column; align-items: stretch; gap: 12px; }
-  .match-actions { padding-left: 0; border-left: none; width: 100%; }
-  .match-actions button { width: 100%; }
+  .match-actions { padding-left: 0; border-left: none; width: 100%; flex-direction: row; gap: 6px; }
+  .match-actions button { flex: 1; width: auto; }
+
+  /* Permite que no celular a súmula faça scroll */
+  .sumula-container { flex-direction: column; overflow-y: auto; }
+  .modal.modal-wide { height: 95vh; padding: 15px; }
 }
