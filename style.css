@@ -165,19 +165,26 @@ td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
 .sumula-table td { padding: 3px 6px; vertical-align: middle; border-bottom: 1px solid #ddd; font-size: 0.85rem; }
 .sumula-table tr:hover { background: #f5f5f5; }
 
-/* Botões menores */
+/* Botões da Súmula */
 .action-btn { background: #eee; border: 1px solid #ccc; border-radius: 4px; padding: 2px 6px; font-size: 0.9rem; cursor: pointer; color: #333; display: inline-flex; align-items: center; justify-content: center; min-width: 28px; font-weight: bold; margin: 0 2px; }
 .action-btn:hover { background: #ddd; }
 .action-btn.active-yellow { background: #ffeb3b; border-color: #fbc02d; }
 .action-btn.active-red { background: #f44336; border-color: #d32f2f; color: white; }
 .action-btn.active-burn { background: #ff5722; color: white; border-color: #e64a19; }
 .action-btn.active-base { background: #2196f3; color: white; border-color: #1976d2; }
-.action-btn.active-return { background: #4caf50; color: white; border-color: #388e3c; } /* NOVO: Botão Voltou ao Meio */
+.action-btn.empty-btn { background: transparent; border: 1px dashed #ccc; box-shadow: none; color: transparent; }
+.action-btn.empty-btn:hover { background: #e0e0e0; }
 
-.sumula-scoreboard { text-align: center; font-size: 2rem; font-weight: 900; color: var(--sidebar); margin-bottom: 5px; letter-spacing: 2px; }
+.sumula-scoreboard { text-align: center; font-size: 2.2rem; font-weight: 900; color: var(--sidebar); margin: 0; letter-spacing: 2px; }
 .sumula-scoreboard span { padding: 0 15px; }
 .sumula-scoreboard .vs { font-size: 1.5rem; color: #999; }
 .sumula-footer { border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px; text-align: right; }
+
+/* Cronómetro Digital */
+.timer-box { display: flex; align-items: center; justify-content: center; gap: 8px; background: #e0e0e0; padding: 6px 12px; border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+.timer-display { font-size: 2.2rem; font-family: 'Courier New', Courier, monospace; font-weight: bold; color: var(--sidebar); min-width: 110px; text-align: center; line-height: 1; margin-top: 2px;}
+.timer-btn { background: #78909c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.95rem; font-weight:bold; }
+.timer-btn:hover { background: #607d8b; }
 
 /* ============================================================
    CHAVEAMENTOS (BRACKETS)
