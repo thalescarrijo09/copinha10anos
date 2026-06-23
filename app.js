@@ -21,7 +21,8 @@ const state = {
   currentUser: null, userRole: null,
   schools: [], professors: [], teams: [], tournaments: [],
   currentTournament: null, currentTeam: null, currentSquadTeam: null,
-  profTeams: [], profTournaments: []
+  profTeams: [], profTournaments: [],
+  currentSumula: null // NOVO: Controle da Súmula
 };
 window.state = state;
 
@@ -126,10 +127,12 @@ onAuthStateChanged(auth, async (user) => {
     const snap = await getDoc(doc(db, 'users', user.uid));
     if (snap.exists()) {
       state.currentUser = { uid: user.uid, ...snap.data() };
+      state.currentUser.schoolIds = state.currentUser.schoolIds || (state.currentUser.schoolId ? [state.currentUser.schoolId] : []);
       state.userRole = snap.data().role;
       document.getElementById('userName').textContent = snap.data().name || user.email;
       document.getElementById('loginView').style.display = 'none';
       document.getElementById('appView').style.display = 'flex';
+      
       if (state.userRole === 'admin') {
         document.getElementById('navAdmin').classList.remove('hidden');
         await init();
@@ -206,6 +209,22 @@ function renderSchoolsTable() {
       <button class="danger" onclick="app.deleteSchool('${s.id}')">Excluir</button></td></tr>`).join('');
 }
 
+// ----------------------------------------------------
+// SISTEMA DE MODAL (Atualizado com Modo Wide)
+// ----------------------------------------------------
+function openModal(html, isWide = false) {
+  const content = document.getElementById('modalContent');
+  content.innerHTML = html;
+  if(isWide) {
+    content.classList.add('modal-wide');
+  } else {
+    content.classList.remove('modal-wide');
+  }
+  document.getElementById('modalOverlay').style.display = 'flex';
+}
+function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
+
+
 function openSchoolModal(id) {
   const isEdit = !!id;
   const school = isEdit ? state.schools.find(s => s.id === id) : null;
@@ -242,15 +261,11 @@ function renderProfessorsTable() {
       <button class="danger" onclick="app.deleteProfessor('${p.id}')">Excluir</button></td></tr>`).join('');
 }
 
-// ----------------------------------------------------
-// ATUALIZADO: SALVAR PROFESSOR (Múltiplas Escolas)
-// ----------------------------------------------------
 async function saveProfessor(id) {
   const name = document.getElementById('profName').value.trim();
   const email = document.getElementById('profEmail').value.trim();
   const password = document.getElementById('profPassword').value;
   
-  // Captura todas as escolas marcadas no checkbox
   const checked = document.querySelectorAll('#profSchoolsChecklist input[type="checkbox"]:checked');
   const schoolIds = Array.from(checked).map(c => c.value);
 
@@ -265,7 +280,6 @@ async function saveProfessor(id) {
     const data = await res.json();
     if (!res.ok) return alert('Erro ao criar usuário: ' + (data.error?.message || 'Erro desconhecido'));
     id = data.localId;
-    // Salva com array 'schoolIds'
     await setDoc(doc(db, 'users', id), { email, name, role: 'professor', schoolIds });
   } else {
     await updateDoc(doc(db, 'users', id), { name, email, schoolIds });
@@ -275,14 +289,9 @@ async function saveProfessor(id) {
   closeModal(); await loadProfessors(); renderProfessorsTable(); renderDashboard();
 }
 
-// ----------------------------------------------------
-// ATUALIZADO: MODAL DO PROFESSOR (Múltiplas Escolas)
-// ----------------------------------------------------
 function openProfessorModal(id) {
   const isEdit = !!id;
   const prof = isEdit ? state.professors.find(p => p.id === id) : null;
-  
-  // Recupera escolas do professor (lidando com dados antigos que usavam schoolId string)
   const pSchools = prof ? (prof.schoolIds || (prof.schoolId ? [prof.schoolId] : [])) : [];
 
   const schoolsHtml = state.schools.map(s => `
@@ -392,16 +401,6 @@ function statusToLabel(s) {
   return s === 'pending' ? 'Pendente' : s === 'active' ? 'Em andamento' : s === 'finished' ? 'Finalizado' : 'Pendente';
 }
 
-function openModal(html) {
-  document.getElementById('modalContent').innerHTML = html;
-  document.getElementById('modalOverlay').style.display = 'flex';
-}
-function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
-
-// ============================================================
-// GERENCIAMENTO DE TORNEIOS
-// ============================================================
-
 function openEditTournamentModal(id) {
   const t = state.tournaments.find(x => x.id === id) || state.currentTournament;
   if (!t) return;
@@ -504,8 +503,9 @@ async function deleteTournament(id) {
   alert('Torneio excluído!');
 }
 
+
 // ============================================================
-// MODAL DE SÚMULA / PLANTEL (CLIQUE NO CHAVEAMENTO)
+// MODAL DE PLANTEL SIMPLES (CLIQUE NO NOME)
 // ============================================================
 
 async function openTeamSquadModal(teamId) {
@@ -515,14 +515,13 @@ async function openTeamSquadModal(teamId) {
   const team = { id: tSnap.id, ...tSnap.data() };
   state.currentSquadTeam = team;
 
-  // Lógica de permissão: Admins não editam, Professores editam apenas times das SUAS escolas.
   const userSchools = state.currentUser ? (state.currentUser.schoolIds || (state.currentUser.schoolId ? [state.currentUser.schoolId] : [])) : [];
   const isOwnerProfessor = state.userRole === 'professor' && userSchools.includes(team.schoolId);
   const isEditable = isOwnerProfessor;
 
   let html = `
     <div class="modal-header">
-      <h3 style="display:flex; align-items:center; gap:8px;">📋 Súmula / Plantel <span style="font-size:1rem; font-weight:normal; color:#666;">(${team.name})</span></h3>
+      <h3 style="display:flex; align-items:center; gap:8px;">📋 Plantel <span style="font-size:1rem; font-weight:normal; color:#666;">(${team.name})</span></h3>
       <button class="close-btn" onclick="app.closeModal()">×</button>
     </div>`;
   
@@ -625,7 +624,7 @@ async function removeAthleteFromSquad(teamId, idx) {
 }
 
 // ============================================================
-// CHAVEAMENTO DUPLA ELIMINAÇÃO
+// CHAVEAMENTO DUPLA ELIMINAÇÃO & SALVAMENTO
 // ============================================================
 
 function teamNameClickable(id) {
@@ -699,7 +698,10 @@ function renderMatchCardDE(map, m, seeds, results, readOnly, tournamentId) {
   const actionHtml = winnerIdx !== undefined && !readOnly
     ? `<button class="secondary small-btn" onclick="app.undoMatchResultDE('${tournamentId}', ${m.id})">Desfazer</button>`
     : canEdit
-      ? `<button class="accent small-btn" onclick="app.saveInlineResultDE('${tournamentId}', ${m.id})">Salvar</button>`
+      ? `<div style="display:flex; flex-direction:column; gap:4px;">
+           <button class="secondary small-btn" style="background:#e0e0e0; color:#333; border: 1px solid #ccc;" onclick="app.openSumulaModal('${tournamentId}', ${m.id})">⚽ Súmula</button>
+           <button class="accent small-btn" onclick="app.saveInlineResultDE('${tournamentId}', ${m.id})">Salvar</button>
+         </div>`
       : bothDecided && readOnly 
         ? '<span class="badge" style="background:#fffde7;">Aguardando</span>'
         : '';
@@ -813,6 +815,7 @@ async function startTournament() {
   alert('Torneio iniciado!'); openTournamentDetail(tournament.id);
 }
 
+// Salva de forma manual via botão "Salvar" direto no Card
 async function saveInlineResultDE(tournamentId, jogoId) {
   const scoreAInput = document.getElementById(`match_${jogoId}_score0`);
   const scoreBInput = document.getElementById(`match_${jogoId}_score1`);
@@ -829,22 +832,28 @@ async function saveInlineResultDE(tournamentId, jogoId) {
   }
 
   const winnerIdx = scoreA > scoreB ? 0 : 1;
+  await executeSaveResult(tournamentId, jogoId, scoreA, scoreB, winnerIdx, null);
+}
 
-  const tournament = state.tournaments.find(t => t.id === tournamentId) || state.currentTournament;
-  const results = { ...(tournament.results || {}) };
+// Função centralizada para gravar o resultado no banco (Usada pelo Card e pela Súmula)
+async function executeSaveResult(tournamentId, jogoId, scoreA, scoreB, winnerIdx, detailsObj) {
+  const t = state.tournaments.find(x => x.id === tournamentId) || state.currentTournament;
+  const results = { ...(t.results || {}) };
   
   results[jogoId] = { scoreA, scoreB, winner: winnerIdx };
-  tournament.results = results;
+  if (detailsObj) results[jogoId].details = detailsObj;
+  
+  t.results = results;
 
-  const map = MAPS[tournament.bracketSize];
-  const finalGame = matchById(map, MAPS[tournament.bracketSize].winners.flat().find(g => g.label === 'Final').id);
+  const map = MAPS[t.bracketSize];
+  const finalGame = matchById(map, MAPS[t.bracketSize].winners.flat().find(g => g.label === 'Final').id);
   const newStatus = results[finalGame.id] !== undefined ? 'finished' : 'active';
 
   await updateDoc(doc(db, 'tournaments', tournamentId), {
     results, status: newStatus, updatedAt: new Date().toISOString()
   });
-  tournament.status = newStatus;
-  renderTournamentDetail(tournament);
+  t.status = newStatus;
+  renderTournamentDetail(t);
 }
 
 async function undoMatchResultDE(tournamentId, jogoId) {
@@ -861,6 +870,179 @@ async function undoMatchResultDE(tournamentId, jogoId) {
   });
   tournament.status = 'active';
   renderTournamentDetail(tournament);
+}
+
+// ============================================================
+// LÓGICA DA SÚMULA ONLINE
+// ============================================================
+
+function openSumulaModal(tournamentId, matchId) {
+  const t = state.tournaments.find(x => x.id === tournamentId);
+  if (!t) return;
+  const map = MAPS[t.bracketSize];
+  const match = matchById(map, matchId);
+  const slotA = resolveSlot(map, match.s[0], t.seeds, t.results || {});
+  const slotB = resolveSlot(map, match.s[1], t.seeds, t.results || {});
+  
+  if (!slotA.decided || !slotB.decided) return alert('As equipes ainda não estão definidas para este jogo.');
+
+  const teamA = state.teams.find(x => x.id === slotA.teamId);
+  const teamB = state.teams.find(x => x.id === slotB.teamId);
+
+  // Inicializa Estado da Súmula (Zerada)
+  state.currentSumula = {
+    tournamentId, matchId, modality: t.modality,
+    teamA, teamB,
+    dataA: {}, dataB: {},
+    scoreA: 0, scoreB: 0
+  };
+
+  // Prepara estrutura base para Futsal e Queimada
+  const isQueimada = t.modality === 'queimada';
+  const initAtleta = () => isQueimada ? { burned: false, base: false, yellow: 0, red: 0 } : { goals: 0, yellow: 0, red: 0 };
+  
+  (teamA.athletes || []).forEach(a => state.currentSumula.dataA[a.name] = initAtleta());
+  (teamB.athletes || []).forEach(b => state.currentSumula.dataB[b.name] = initAtleta());
+
+  // Regra Exclusiva da Queimada: Calcula o WO Parcial (Faltantes)
+  if (isQueimada) {
+    const faltantesA = Math.max(0, 12 - (teamA.athletes || []).length);
+    const faltantesB = Math.max(0, 12 - (teamB.athletes || []).length);
+    state.currentSumula.scoreA = faltantesB; // Faltantes de A dão ponto pra B
+    state.currentSumula.scoreB = faltantesA;
+    state.currentSumula.faltantesA = faltantesA;
+    state.currentSumula.faltantesB = faltantesB;
+  }
+
+  renderSumulaModal();
+}
+
+function calcSumulaScore() {
+  const s = state.currentSumula;
+  let ptsA = 0, ptsB = 0;
+  
+  if (s.modality === 'queimada') {
+    ptsA = s.faltantesB || 0; ptsB = s.faltantesA || 0;
+    Object.values(s.dataB).forEach(v => { if(v.burned) ptsA++; });
+    Object.values(s.dataA).forEach(v => { if(v.burned) ptsB++; });
+  } else {
+    Object.values(s.dataA).forEach(v => { ptsA += v.goals; });
+    Object.values(s.dataB).forEach(v => { ptsB += v.goals; });
+  }
+  
+  s.scoreA = ptsA; s.scoreB = ptsB;
+  
+  const pA = document.getElementById('sumScoreA');
+  const pB = document.getElementById('sumScoreB');
+  if(pA) pA.textContent = ptsA;
+  if(pB) pB.textContent = ptsB;
+}
+
+function updateSum(teamStr, athName, field, increment = true) {
+  const d = state.currentSumula[teamStr][athName];
+  if(typeof d[field] === 'boolean') {
+    d[field] = !d[field];
+  } else {
+    if(increment) d[field]++;
+    else if(d[field] > 0) d[field]--;
+  }
+  renderSumulaModal(); 
+}
+
+function renderSumulaModal() {
+  const s = state.currentSumula;
+  const isQ = s.modality === 'queimada';
+  calcSumulaScore();
+
+  const buildRows = (team, dataObj, teamStr) => {
+    return (team.athletes || []).sort((x,y) => (x.number||0)-(y.number||0)).map(a => {
+      const d = dataObj[a.name];
+      if (isQ) {
+        return `<tr>
+          <td style="text-align:center; font-weight:bold;">${a.number||'-'}</td>
+          <td style="${d.burned ? 'text-decoration:line-through; color:#aaa;' : ''}">${a.name}</td>
+          <td style="text-align:center;"><button class="action-btn ${d.base?'active-base':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'base')">👑</button></td>
+          <td style="text-align:center;"><button class="action-btn ${d.burned?'active-burn':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'burned')">☠️</button></td>
+          <td style="text-align:center;">
+            <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
+          </td>
+        </tr>`;
+      } else {
+        return `<tr>
+          <td style="text-align:center; font-weight:bold;">${a.number||'-'}</td>
+          <td>${a.name}</td>
+          <td style="text-align:center;">
+            <button class="action-btn" onclick="app.updateSum('${teamStr}', '${a.name}', 'goals', false)">-</button>
+            <span style="display:inline-block; width:20px; font-weight:bold;">${d.goals}</span>
+            <button class="action-btn" style="color:var(--sidebar);" onclick="app.updateSum('${teamStr}', '${a.name}', 'goals', true)">+</button>
+          </td>
+          <td style="text-align:center;">
+            <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
+            <button class="action-btn ${d.red>0?'active-red':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'red')">🟥 ${d.red>0?d.red:''}</button>
+          </td>
+        </tr>`;
+      }
+    }).join('');
+  };
+
+  const html = `
+    <div class="modal-header" style="margin-bottom: 10px;">
+      <h3 style="margin:0;">⚽ Súmula Digital - ${MODALITY_LABELS[s.modality]}</h3>
+      <button class="close-btn" onclick="app.closeModal()">×</button>
+    </div>
+    
+    <div class="sumula-scoreboard">
+      <span id="sumScoreA">${s.scoreA}</span> <span class="vs">X</span> <span id="sumScoreB">${s.scoreB}</span>
+    </div>
+
+    <div class="sumula-container">
+      <div class="sumula-team team-a">
+        <h4>${s.teamA.name}</h4>
+        <div class="sumula-table-wrapper">
+          <table class="sumula-table">
+            <thead>
+              <tr><th style="width:30px;">Nº</th><th>Atleta</th>${isQ ? '<th style="text-align:center; width:50px;">Base</th><th style="text-align:center; width:50px;">Queim.</th><th style="text-align:center; width:50px;">Cartão</th>' : '<th style="text-align:center; width:100px;">Golos</th><th style="text-align:center; width:90px;">Cartões</th>'}</tr>
+            </thead>
+            <tbody>${buildRows(s.teamA, s.dataA, 'dataA')}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="sumula-team team-b">
+        <h4>${s.teamB.name}</h4>
+        <div class="sumula-table-wrapper">
+          <table class="sumula-table">
+            <thead>
+              <tr><th style="width:30px;">Nº</th><th>Atleta</th>${isQ ? '<th style="text-align:center; width:50px;">Base</th><th style="text-align:center; width:50px;">Queim.</th><th style="text-align:center; width:50px;">Cartão</th>' : '<th style="text-align:center; width:100px;">Golos</th><th style="text-align:center; width:90px;">Cartões</th>'}</tr>
+            </thead>
+            <tbody>${buildRows(s.teamB, s.dataB, 'dataB')}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <div class="sumula-footer">
+      <button class="accent" style="font-size: 1.1rem; padding: 12px 30px;" onclick="app.finishSumula()">Salvar Súmula Oficial</button>
+    </div>
+  `;
+
+  // Chama o openModal passando isWide = true para usar a classe .modal-wide
+  openModal(html, true); 
+}
+
+async function finishSumula() {
+  const s = state.currentSumula;
+  calcSumulaScore();
+  
+  if (s.scoreA === s.scoreB) {
+    return alert('Não pode haver empates nas eliminatórias. Assinale o ponto de desempate antes de fechar a súmula.');
+  }
+  
+  const winnerIdx = s.scoreA > s.scoreB ? 0 : 1;
+  const detailsObj = { dataA: s.dataA, dataB: s.dataB };
+  
+  await executeSaveResult(s.tournamentId, s.matchId, s.scoreA, s.scoreB, winnerIdx, detailsObj);
+  closeModal();
 }
 
 // ============================================================
@@ -1061,9 +1243,6 @@ function renderGeneralStandings() {
 // ÁREA DO PROFESSOR (Gestão Geral e Histórico)
 // ============================================================
 
-// ----------------------------------------------------
-// ATUALIZADO: BUSCA DE TIMES POR MÚLTIPLAS ESCOLAS
-// ----------------------------------------------------
 async function loadProfTeams() {
   const userSchools = state.currentUser ? (state.currentUser.schoolIds || (state.currentUser.schoolId ? [state.currentUser.schoolId] : [])) : [];
   
@@ -1074,8 +1253,6 @@ async function loadProfTeams() {
   }
 
   if (state.teams.length === 0) await loadTeams();
-  
-  // Filtra localmente todas as equipes onde o ID da escola bate com a lista do professor
   state.profTeams = state.teams.filter(t => userSchools.includes(t.schoolId));
   renderProfTeams();
 }
@@ -1203,10 +1380,11 @@ window.app = {
   openTournamentDetail, openEditTournamentModal, saveTournamentName,
   openManageTeamsModal, saveTournamentTeams, deleteTournament,
   shuffleTournamentTeams, startTournament,
-  saveInlineResultDE, undoMatchResultDE,
+  saveInlineResultDE, undoMatchResultDE, executeSaveResult,
   openTeamSquadModal, addAthleteToSquad, removeAthleteFromSquad, 
   closeModal,
   openAthletes, addAthlete, removeAthlete,
   loadProfTournaments, openProfTournamentDetail, toggleSidebar,
-  renderGeneralStandings
+  renderGeneralStandings,
+  openSumulaModal, updateSum, finishSumula
 };
