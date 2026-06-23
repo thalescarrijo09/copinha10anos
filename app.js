@@ -210,6 +210,9 @@ function renderSchoolsTable() {
       <button class="danger" onclick="app.deleteSchool('${s.id}')">Excluir</button></td></tr>`).join('');
 }
 
+// ----------------------------------------------------
+// SISTEMA DE MODAL
+// ----------------------------------------------------
 function openModal(html, isWide = false) {
   const content = document.getElementById('modalContent');
   content.innerHTML = html;
@@ -222,6 +225,7 @@ function openModal(html, isWide = false) {
 }
 
 function closeModal() { 
+  // Se o cronómetro estiver a correr na súmula, pausa o relógio
   if (state.currentSumula && state.currentSumula.timer && state.currentSumula.timer.interval) {
     clearInterval(state.currentSumula.timer.interval);
   }
@@ -524,7 +528,7 @@ async function openTeamSquadModal(teamId) {
   let html = `
     <div class="modal-header">
       <h3 style="display:flex; align-items:center; gap:8px;">📋 Plantel <span style="font-size:1rem; font-weight:normal; color:#666;">(${team.name})</span></h3>
-      <button class="close-btn" onclick="app.closeModal()">×</button>
+      <button class="close-btn" style="width: auto !important; margin: 0 !important;" onclick="app.closeModal()">×</button>
     </div>`;
   
   html += `<p class="small mb"><span class="badge ${team.modality}">${MODALITY_LABELS[team.modality]}</span> <span class="badge ${team.category}">${CATEGORY_LABELS[team.category]}</span> <span class="badge ${team.gender}">${GENDER_LABELS[team.gender]}</span></p>`;
@@ -882,7 +886,6 @@ function saveSumulaLocal() {
   if (!state.currentSumula) return;
   const s = state.currentSumula;
   
-  // Clone seguro para guardar na memória (sem dados circulares e pausado)
   const backup = {
     tournamentId: s.tournamentId, matchId: s.matchId, modality: s.modality,
     dataA: s.dataA, dataB: s.dataB, scoreA: s.scoreA, scoreB: s.scoreB,
@@ -906,7 +909,7 @@ function formatTime(secs) {
 }
 
 function toggleTimer() {
-  initAudio(); // Exigência do navegador: áudio só inicia com clique do utilizador
+  initAudio(); 
   const t = state.currentSumula.timer;
   if (!t) return;
   
@@ -919,7 +922,6 @@ function toggleTimer() {
       if (t.totalSeconds > 0) {
         t.totalSeconds--;
         
-        // Avisos Sonoros Mágicos
         if (t.totalSeconds === 60) playOneMinuteWarning();
         if (t.totalSeconds === 0) playEndWarning();
 
@@ -931,7 +933,6 @@ function toggleTimer() {
         renderSumulaModal(); 
       }
       
-      // Auto-save a cada 5 segundos que correm no relógio
       if(t.totalSeconds % 5 === 0) saveSumulaLocal();
       
     }, 1000);
@@ -974,14 +975,13 @@ function openSumulaModal(tournamentId, matchId) {
   const teamA = state.teams.find(x => x.id === slotA.teamId);
   const teamB = state.teams.find(x => x.id === slotB.teamId);
 
-  // Verificação Mágica do Auto-Save!
   const backupStr = localStorage.getItem('sumulaBackup_' + matchId);
   if (backupStr) {
     if (confirm('Foi encontrada uma súmula em andamento salva no seu dispositivo para este jogo.\n\nDeseja restaurá-la de onde parou?')) {
       const backup = JSON.parse(backupStr);
       state.currentSumula = {
         tournamentId, matchId, modality: t.modality,
-        teamA, teamB, // Injetando as equipas originais de novo
+        teamA, teamB, 
         dataA: backup.dataA, dataB: backup.dataB,
         scoreA: backup.scoreA, scoreB: backup.scoreB,
         faltantesA: backup.faltantesA, faltantesB: backup.faltantesB,
@@ -990,11 +990,10 @@ function openSumulaModal(tournamentId, matchId) {
       renderSumulaModal();
       return;
     } else {
-      localStorage.removeItem('sumulaBackup_' + matchId); // Limpa se recusar
+      localStorage.removeItem('sumulaBackup_' + matchId);
     }
   }
 
-  // Inicializa Nova Súmula (Zerada)
   state.currentSumula = {
     tournamentId, matchId, modality: t.modality,
     teamA, teamB, dataA: {}, dataB: {},
@@ -1058,7 +1057,6 @@ function updateSum(teamStr, athName, field, increment = true) {
   } else if (field === 'yellow') {
     if (increment) {
       d.yellow++;
-      // Regra dos 4 Cartões: Queima na hora
       if (isQ) {
         const totalY = Object.values(s[teamStr]).reduce((sum, a) => sum + a.yellow, 0);
         if (totalY >= 4 && !d.burned) {
@@ -1077,7 +1075,7 @@ function updateSum(teamStr, athName, field, increment = true) {
   }
   
   renderSumulaModal(); 
-  saveSumulaLocal(); // Salva a cada clique humano!
+  saveSumulaLocal(); 
 }
 
 function renderSumulaModal() {
@@ -1136,26 +1134,31 @@ function renderSumulaModal() {
       }).join('');
   };
 
+  // HTML da Súmula com Hierarquia de Título, Cronómetro e Placar Empilhados
   const html = `
-    <div class="modal-header" style="margin-bottom: 5px;">
-      <h3 style="margin:0;">⚽ Súmula Digital - ${MODALITY_LABELS[s.modality]}</h3>
-      <button class="close-btn" onclick="app.closeModal()">×</button>
+    <div class="modal-header" style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-start;">
+      <h3 style="margin:0; font-size: 1.2rem;">⚽ Súmula Digital - ${MODALITY_LABELS[s.modality]}</h3>
+      <button class="close-btn" style="width: auto !important; margin: 0 !important; padding: 6px 15px !important; flex-shrink: 0;" onclick="app.closeModal()">×</button>
     </div>
     
-    <div style="display:flex; justify-content:center; align-items:center; gap:30px; margin-bottom: 10px; flex-wrap:wrap;">
-      <div class="sumula-scoreboard">
+    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; gap:8px; margin-bottom: 15px;">
+      
+      <!-- RELÓGIO ACIMA -->
+      <div class="timer-box">
+        <button class="timer-btn" style="width: auto !important; margin: 0 !important;" onclick="app.adjustTimer(-1)">-1m</button>
+        <div class="timer-display" id="timerDisplay">${formatTime(s.timer.totalSeconds)}</div>
+        <button class="timer-btn" style="width: auto !important; margin: 0 !important;" onclick="app.adjustTimer(1)">+1m</button>
+        <button class="timer-btn" style="width: auto !important; margin: 0 0 0 10px !important; background: ${s.timer.isRunning ? '#f44336' : '#4caf50'}; min-width: 100px;" onclick="app.toggleTimer()">
+          ${s.timer.isRunning ? '⏸ Pausar' : '▶ Iniciar'}
+        </button>
+        <button class="timer-btn-reset" style="width: auto !important; margin: 0 0 0 5px !important; padding: 6px 12px; border-radius: 4px;" onclick="app.resetTimer()">⟲</button>
+      </div>
+
+      <!-- PLACAR ABAIXO -->
+      <div class="sumula-scoreboard" style="margin:0;">
         <span id="sumScoreA">${s.scoreA}</span> <span class="vs">X</span> <span id="sumScoreB">${s.scoreB}</span>
       </div>
 
-      <div class="timer-box">
-        <button class="timer-btn" onclick="app.adjustTimer(-1)">-1m</button>
-        <div class="timer-display" id="timerDisplay">${formatTime(s.timer.totalSeconds)}</div>
-        <button class="timer-btn" onclick="app.adjustTimer(1)">+1m</button>
-        <button class="timer-btn" style="margin-left: 10px; background: ${s.timer.isRunning ? '#f44336' : '#4caf50'}; min-width: 100px;" onclick="app.toggleTimer()">
-          ${s.timer.isRunning ? '⏸ Pausar' : '▶ Iniciar'}
-        </button>
-        <button class="timer-btn-reset" style="margin-left: 5px;" onclick="app.resetTimer()">⟲</button>
-      </div>
     </div>
 
     <div class="sumula-container">
@@ -1206,7 +1209,6 @@ async function finishSumula() {
   
   await executeSaveResult(s.tournamentId, s.matchId, s.scoreA, s.scoreB, winnerIdx, detailsObj);
   
-  // Limpa o Backup pois o jogo já foi salvo oficialmente no Firebase
   localStorage.removeItem('sumulaBackup_' + s.matchId);
   closeModal();
 }
@@ -1537,7 +1539,6 @@ function toggleSidebar() {
   if (overlay) overlay.classList.toggle('active');
 }
 
-// Exportações Globais
 window.app = {
   login, logout, show,
   openSchoolModal, saveSchool, deleteSchool,
