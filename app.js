@@ -209,6 +209,9 @@ function renderSchoolsTable() {
       <button class="danger" onclick="app.deleteSchool('${s.id}')">Excluir</button></td></tr>`).join('');
 }
 
+// ----------------------------------------------------
+// SISTEMA DE MODAL
+// ----------------------------------------------------
 function openModal(html, isWide = false) {
   const content = document.getElementById('modalContent');
   content.innerHTML = html;
@@ -219,8 +222,14 @@ function openModal(html, isWide = false) {
   }
   document.getElementById('modalOverlay').style.display = 'flex';
 }
-function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
 
+function closeModal() { 
+  // Se o cronómetro estiver a correr na súmula, pausa o relógio para não gerar erros no fundo
+  if (state.currentSumula && state.currentSumula.timer && state.currentSumula.timer.interval) {
+    clearInterval(state.currentSumula.timer.interval);
+  }
+  document.getElementById('modalOverlay').style.display = 'none'; 
+}
 
 function openSchoolModal(id) {
   const isEdit = !!id;
@@ -869,8 +878,47 @@ async function undoMatchResultDE(tournamentId, jogoId) {
 }
 
 // ============================================================
-// LÓGICA DA SÚMULA ONLINE (COMPACTA, ORDENADA E COM BASE ÚNICA)
+// LÓGICA DA SÚMULA ONLINE E TEMPORIZADOR
 // ============================================================
+
+function formatTime(secs) {
+  const m = Math.floor(secs / 60).toString().padStart(2, '0');
+  const s = (secs % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function toggleTimer() {
+  const t = state.currentSumula.timer;
+  if (!t) return;
+  if (t.isRunning) {
+    clearInterval(t.interval);
+    t.isRunning = false;
+  } else {
+    t.isRunning = true;
+    t.interval = setInterval(() => {
+      if (t.totalSeconds > 0) {
+        t.totalSeconds--;
+        const display = document.getElementById('timerDisplay');
+        if (display) display.textContent = formatTime(t.totalSeconds);
+      } else {
+        clearInterval(t.interval);
+        t.isRunning = false;
+        alert('⏱️ O Tempo Esgotou!');
+        renderSumulaModal(); 
+      }
+    }, 1000);
+  }
+  renderSumulaModal();
+}
+
+function adjustTimer(mins) {
+  const t = state.currentSumula.timer;
+  if (!t) return;
+  t.totalSeconds += mins * 60;
+  if (t.totalSeconds < 0) t.totalSeconds = 0;
+  const display = document.getElementById('timerDisplay');
+  if (display) display.textContent = formatTime(t.totalSeconds);
+}
 
 function openSumulaModal(tournamentId, matchId) {
   const t = state.tournaments.find(x => x.id === tournamentId);
@@ -885,15 +933,13 @@ function openSumulaModal(tournamentId, matchId) {
   const teamA = state.teams.find(x => x.id === slotA.teamId);
   const teamB = state.teams.find(x => x.id === slotB.teamId);
 
-  // Inicializa Estado da Súmula (Zerada)
   state.currentSumula = {
     tournamentId, matchId, modality: t.modality,
-    teamA, teamB,
-    dataA: {}, dataB: {},
-    scoreA: 0, scoreB: 0
+    teamA, teamB, dataA: {}, dataB: {},
+    scoreA: 0, scoreB: 0,
+    timer: { totalSeconds: 15 * 60, isRunning: false, interval: null }
   };
 
-  // Prepara estrutura base para Futsal e Queimada (Nova propriedade: returned)
   const isQueimada = t.modality === 'queimada';
   const initAtleta = () => isQueimada ? { burned: false, base: false, returned: false, yellow: 0, red: 0 } : { goals: 0, yellow: 0, red: 0 };
   
@@ -933,26 +979,37 @@ function calcSumulaScore() {
   if(pB) pB.textContent = ptsB;
 }
 
-// ATUALIZADO: Controlo de Base Única e Retorno ao Meio
 function updateSum(teamStr, athName, field, increment = true) {
-  const d = state.currentSumula[teamStr][athName];
+  const s = state.currentSumula;
+  const d = s[teamStr][athName];
+  const isQ = s.modality === 'queimada';
   
   if (field === 'base') {
     if (!d.base) {
-      // É UMA NOVA BASE: Desliga a Base e o Retorno de todos os outros atletas da equipa
-      Object.values(state.currentSumula[teamStr]).forEach(v => {
-        v.base = false;
-        v.returned = false;
-      });
+      // É nova base: desmarca todas as outras do time
+      Object.values(s[teamStr]).forEach(v => { v.base = false; v.returned = false; });
       d.base = true;
     } else {
-      // ESTÁ A DESLIGAR A BASE ATUAL
+      // Remove a base atual
       d.base = false;
       d.returned = false;
     }
   } else if (field === 'returned') {
-    // Alterna se a Base já foi ao meio ou não
     d.returned = !d.returned;
+  } else if (field === 'yellow') {
+    if (increment) {
+      d.yellow++;
+      // Regra dos 4 Cartões: Eliminação Automática na Queimada
+      if (isQ) {
+        const totalY = Object.values(s[teamStr]).reduce((sum, a) => sum + a.yellow, 0);
+        if (totalY >= 4) {
+          d.burned = true;
+          setTimeout(() => alert(`⚠️ Limite de Cartões da Equipe!\nEste é o ${totalY}º cartão amarelo.\nO atleta ${athName} foi queimado automaticamente.`), 50);
+        }
+      }
+    } else {
+      if (d.yellow > 0) d.yellow--;
+    }
   } else if (typeof d[field] === 'boolean') {
     d[field] = !d[field];
   } else {
@@ -970,7 +1027,7 @@ function renderSumulaModal() {
 
   const buildRows = (team, dataObj, teamStr) => {
     return (team.athletes || [])
-      // ATUALIZADO: A Base vai para a última linha da tabela
+      // Ordenação: Base vai sempre para o fim da lista
       .sort((x, y) => {
         const dx = dataObj[x.name];
         const dy = dataObj[y.name];
@@ -981,18 +1038,23 @@ function renderSumulaModal() {
       .map(a => {
         const d = dataObj[a.name];
         if (isQ) {
-          // Botão que só aparece se o aluno for a Base
+          // Checkbox para o retorno ao meio
           let returnHtml = '';
           if (d.base) {
-            returnHtml = `<button class="action-btn ${d.returned ? 'active-return' : ''}" style="margin-left:8px; font-size:0.75rem;" onclick="app.updateSum('${teamStr}', '${a.name}', 'returned')">🔄 Voltou ao Meio</button>`;
+            returnHtml = `<label style="margin-left:10px; font-size:0.75rem; cursor:pointer; color:#555; background:#eee; padding:2px 6px; border-radius:4px; border:1px solid #ccc; display:inline-flex; align-items:center; gap:4px;">
+              <input type="checkbox" ${d.returned ? 'checked' : ''} onchange="app.updateSum('${teamStr}', '${a.name}', 'returned')"> Ao meio
+            </label>`;
           }
+
+          const baseBtnClass = d.base ? 'active-base' : 'empty-btn';
+          const baseBtnContent = d.base ? '👑' : '';
 
           return `<tr>
             <td style="text-align:center; font-weight:bold;">${a.number||'-'}</td>
             <td style="${d.burned ? 'text-decoration:line-through; color:#aaa;' : ''}">
               ${a.name} ${returnHtml}
             </td>
-            <td style="text-align:center;"><button class="action-btn ${d.base?'active-base':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'base')">👑</button></td>
+            <td style="text-align:center;"><button class="action-btn ${baseBtnClass}" style="min-width:32px; height:28px;" onclick="app.updateSum('${teamStr}', '${a.name}', 'base')">${baseBtnContent}</button></td>
             <td style="text-align:center;"><button class="action-btn ${d.burned?'active-burn':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'burned')">☠️</button></td>
             <td style="text-align:center;">
               <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
@@ -1017,13 +1079,24 @@ function renderSumulaModal() {
   };
 
   const html = `
-    <div class="modal-header" style="margin-bottom: 10px;">
+    <div class="modal-header" style="margin-bottom: 5px;">
       <h3 style="margin:0;">⚽ Súmula Digital - ${MODALITY_LABELS[s.modality]}</h3>
       <button class="close-btn" onclick="app.closeModal()">×</button>
     </div>
     
-    <div class="sumula-scoreboard">
-      <span id="sumScoreA">${s.scoreA}</span> <span class="vs">X</span> <span id="sumScoreB">${s.scoreB}</span>
+    <div style="display:flex; justify-content:center; align-items:center; gap:40px; margin-bottom: 10px; flex-wrap:wrap;">
+      <div class="sumula-scoreboard">
+        <span id="sumScoreA">${s.scoreA}</span> <span class="vs">X</span> <span id="sumScoreB">${s.scoreB}</span>
+      </div>
+
+      <div class="timer-box">
+        <button class="timer-btn" onclick="app.adjustTimer(-1)">-1m</button>
+        <div class="timer-display" id="timerDisplay">${formatTime(s.timer.totalSeconds)}</div>
+        <button class="timer-btn" onclick="app.adjustTimer(1)">+1m</button>
+        <button class="timer-btn" style="margin-left: 10px; background: ${s.timer.isRunning ? '#f44336' : '#4caf50'}; min-width: 100px;" onclick="app.toggleTimer()">
+          ${s.timer.isRunning ? '⏸ Pausar' : '▶ Iniciar'}
+        </button>
+      </div>
     </div>
 
     <div class="sumula-container">
@@ -1401,7 +1474,6 @@ function toggleSidebar() {
   if (overlay) overlay.classList.toggle('active');
 }
 
-// Exportações Globais
 window.app = {
   login, logout, show,
   openSchoolModal, saveSchool, deleteSchool,
@@ -1416,5 +1488,5 @@ window.app = {
   openAthletes, addAthlete, removeAthlete,
   loadProfTournaments, openProfTournamentDetail, toggleSidebar,
   renderGeneralStandings,
-  openSumulaModal, updateSum, finishSumula
+  openSumulaModal, updateSum, finishSumula, toggleTimer, adjustTimer
 };
