@@ -22,7 +22,7 @@ const state = {
   schools: [], professors: [], teams: [], tournaments: [],
   currentTournament: null, currentTeam: null, currentSquadTeam: null,
   profTeams: [], profTournaments: [],
-  currentSumula: null // NOVO: Controle da Súmula
+  currentSumula: null 
 };
 window.state = state;
 
@@ -209,9 +209,6 @@ function renderSchoolsTable() {
       <button class="danger" onclick="app.deleteSchool('${s.id}')">Excluir</button></td></tr>`).join('');
 }
 
-// ----------------------------------------------------
-// SISTEMA DE MODAL (Atualizado com Modo Wide)
-// ----------------------------------------------------
 function openModal(html, isWide = false) {
   const content = document.getElementById('modalContent');
   content.innerHTML = html;
@@ -502,7 +499,6 @@ async function deleteTournament(id) {
   }
   alert('Torneio excluído!');
 }
-
 
 // ============================================================
 // MODAL DE PLANTEL SIMPLES (CLIQUE NO NOME)
@@ -873,7 +869,7 @@ async function undoMatchResultDE(tournamentId, jogoId) {
 }
 
 // ============================================================
-// LÓGICA DA SÚMULA ONLINE
+// LÓGICA DA SÚMULA ONLINE (COMPACTA, ORDENADA E COM BASE ÚNICA)
 // ============================================================
 
 function openSumulaModal(tournamentId, matchId) {
@@ -897,18 +893,17 @@ function openSumulaModal(tournamentId, matchId) {
     scoreA: 0, scoreB: 0
   };
 
-  // Prepara estrutura base para Futsal e Queimada
+  // Prepara estrutura base para Futsal e Queimada (Nova propriedade: returned)
   const isQueimada = t.modality === 'queimada';
-  const initAtleta = () => isQueimada ? { burned: false, base: false, yellow: 0, red: 0 } : { goals: 0, yellow: 0, red: 0 };
+  const initAtleta = () => isQueimada ? { burned: false, base: false, returned: false, yellow: 0, red: 0 } : { goals: 0, yellow: 0, red: 0 };
   
   (teamA.athletes || []).forEach(a => state.currentSumula.dataA[a.name] = initAtleta());
   (teamB.athletes || []).forEach(b => state.currentSumula.dataB[b.name] = initAtleta());
 
-  // Regra Exclusiva da Queimada: Calcula o WO Parcial (Faltantes)
   if (isQueimada) {
     const faltantesA = Math.max(0, 12 - (teamA.athletes || []).length);
     const faltantesB = Math.max(0, 12 - (teamB.athletes || []).length);
-    state.currentSumula.scoreA = faltantesB; // Faltantes de A dão ponto pra B
+    state.currentSumula.scoreA = faltantesB; 
     state.currentSumula.scoreB = faltantesA;
     state.currentSumula.faltantesA = faltantesA;
     state.currentSumula.faltantesB = faltantesB;
@@ -938,14 +933,33 @@ function calcSumulaScore() {
   if(pB) pB.textContent = ptsB;
 }
 
+// ATUALIZADO: Controlo de Base Única e Retorno ao Meio
 function updateSum(teamStr, athName, field, increment = true) {
   const d = state.currentSumula[teamStr][athName];
-  if(typeof d[field] === 'boolean') {
+  
+  if (field === 'base') {
+    if (!d.base) {
+      // É UMA NOVA BASE: Desliga a Base e o Retorno de todos os outros atletas da equipa
+      Object.values(state.currentSumula[teamStr]).forEach(v => {
+        v.base = false;
+        v.returned = false;
+      });
+      d.base = true;
+    } else {
+      // ESTÁ A DESLIGAR A BASE ATUAL
+      d.base = false;
+      d.returned = false;
+    }
+  } else if (field === 'returned') {
+    // Alterna se a Base já foi ao meio ou não
+    d.returned = !d.returned;
+  } else if (typeof d[field] === 'boolean') {
     d[field] = !d[field];
   } else {
     if(increment) d[field]++;
     else if(d[field] > 0) d[field]--;
   }
+  
   renderSumulaModal(); 
 }
 
@@ -955,34 +969,51 @@ function renderSumulaModal() {
   calcSumulaScore();
 
   const buildRows = (team, dataObj, teamStr) => {
-    return (team.athletes || []).sort((x,y) => (x.number||0)-(y.number||0)).map(a => {
-      const d = dataObj[a.name];
-      if (isQ) {
-        return `<tr>
-          <td style="text-align:center; font-weight:bold;">${a.number||'-'}</td>
-          <td style="${d.burned ? 'text-decoration:line-through; color:#aaa;' : ''}">${a.name}</td>
-          <td style="text-align:center;"><button class="action-btn ${d.base?'active-base':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'base')">👑</button></td>
-          <td style="text-align:center;"><button class="action-btn ${d.burned?'active-burn':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'burned')">☠️</button></td>
-          <td style="text-align:center;">
-            <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
-          </td>
-        </tr>`;
-      } else {
-        return `<tr>
-          <td style="text-align:center; font-weight:bold;">${a.number||'-'}</td>
-          <td>${a.name}</td>
-          <td style="text-align:center;">
-            <button class="action-btn" onclick="app.updateSum('${teamStr}', '${a.name}', 'goals', false)">-</button>
-            <span style="display:inline-block; width:20px; font-weight:bold;">${d.goals}</span>
-            <button class="action-btn" style="color:var(--sidebar);" onclick="app.updateSum('${teamStr}', '${a.name}', 'goals', true)">+</button>
-          </td>
-          <td style="text-align:center;">
-            <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
-            <button class="action-btn ${d.red>0?'active-red':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'red')">🟥 ${d.red>0?d.red:''}</button>
-          </td>
-        </tr>`;
-      }
-    }).join('');
+    return (team.athletes || [])
+      // ATUALIZADO: A Base vai para a última linha da tabela
+      .sort((x, y) => {
+        const dx = dataObj[x.name];
+        const dy = dataObj[y.name];
+        if (dx.base && !dy.base) return 1;
+        if (!dx.base && dy.base) return -1;
+        return (x.number || 0) - (y.number || 0);
+      })
+      .map(a => {
+        const d = dataObj[a.name];
+        if (isQ) {
+          // Botão que só aparece se o aluno for a Base
+          let returnHtml = '';
+          if (d.base) {
+            returnHtml = `<button class="action-btn ${d.returned ? 'active-return' : ''}" style="margin-left:8px; font-size:0.75rem;" onclick="app.updateSum('${teamStr}', '${a.name}', 'returned')">🔄 Voltou ao Meio</button>`;
+          }
+
+          return `<tr>
+            <td style="text-align:center; font-weight:bold;">${a.number||'-'}</td>
+            <td style="${d.burned ? 'text-decoration:line-through; color:#aaa;' : ''}">
+              ${a.name} ${returnHtml}
+            </td>
+            <td style="text-align:center;"><button class="action-btn ${d.base?'active-base':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'base')">👑</button></td>
+            <td style="text-align:center;"><button class="action-btn ${d.burned?'active-burn':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'burned')">☠️</button></td>
+            <td style="text-align:center;">
+              <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
+            </td>
+          </tr>`;
+        } else {
+          return `<tr>
+            <td style="text-align:center; font-weight:bold;">${a.number||'-'}</td>
+            <td>${a.name}</td>
+            <td style="text-align:center;">
+              <button class="action-btn" onclick="app.updateSum('${teamStr}', '${a.name}', 'goals', false)">-</button>
+              <span style="display:inline-block; width:20px; font-weight:bold;">${d.goals}</span>
+              <button class="action-btn" style="color:var(--sidebar);" onclick="app.updateSum('${teamStr}', '${a.name}', 'goals', true)">+</button>
+            </td>
+            <td style="text-align:center;">
+              <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
+              <button class="action-btn ${d.red>0?'active-red':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'red')">🟥 ${d.red>0?d.red:''}</button>
+            </td>
+          </tr>`;
+        }
+      }).join('');
   };
 
   const html = `
@@ -1022,11 +1053,10 @@ function renderSumulaModal() {
     </div>
     
     <div class="sumula-footer">
-      <button class="accent" style="font-size: 1.1rem; padding: 12px 30px;" onclick="app.finishSumula()">Salvar Súmula Oficial</button>
+      <button class="accent" style="font-size: 1.1rem; padding: 10px 30px;" onclick="app.finishSumula()">Salvar Súmula Oficial</button>
     </div>
   `;
 
-  // Chama o openModal passando isWide = true para usar a classe .modal-wide
   openModal(html, true); 
 }
 
