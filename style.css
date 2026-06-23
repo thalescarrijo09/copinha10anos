@@ -174,17 +174,20 @@ td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
 .action-btn.active-base { background: #2196f3; color: white; border-color: #1976d2; }
 .action-btn.empty-btn { background: transparent; border: 1px dashed #ccc; box-shadow: none; color: transparent; }
 .action-btn.empty-btn:hover { background: #e0e0e0; }
+.action-btn.active-return { background: #4caf50; color: white; border-color: #388e3c; }
 
 .sumula-scoreboard { text-align: center; font-size: 2.2rem; font-weight: 900; color: var(--sidebar); margin: 0; letter-spacing: 2px; }
 .sumula-scoreboard span { padding: 0 15px; }
 .sumula-scoreboard .vs { font-size: 1.5rem; color: #999; }
-.sumula-footer { border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px; text-align: right; }
+.sumula-footer { border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px; display:flex; justify-content: space-between; align-items: center;}
 
 /* Cronómetro Digital */
 .timer-box { display: flex; align-items: center; justify-content: center; gap: 8px; background: #e0e0e0; padding: 6px 12px; border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
 .timer-display { font-size: 2.2rem; font-family: 'Courier New', Courier, monospace; font-weight: bold; color: var(--sidebar); min-width: 110px; text-align: center; line-height: 1; margin-top: 2px;}
 .timer-btn { background: #78909c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.95rem; font-weight:bold; }
 .timer-btn:hover { background: #607d8b; }
+.timer-btn-reset { background: #ccc; color: #333; font-size: 0.8rem; padding: 4px 8px; border: 1px solid #aaa;}
+.timer-btn-reset:hover { background: #bbb; }
 
 /* ============================================================
    CHAVEAMENTOS (BRACKETS)
