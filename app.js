@@ -21,8 +21,7 @@ const state = {
   currentUser: null, userRole: null,
   schools: [], professors: [], teams: [], tournaments: [],
   currentTournament: null, currentTeam: null, currentSquadTeam: null,
-  profTeams: [], profTournaments: [],
-  currentSumula: null // NOVO: Controle de estado da Súmula Online
+  profTeams: [], profTournaments: []
 };
 window.state = state;
 
@@ -38,28 +37,38 @@ const SEEDS = ['A','B','C','D','E','F','G','H','I','J'];
 const MAPS = {
   7:{
     winners:[
-      [ {id:1,label:'Jogo 1',s:[{seed:'C'},{seed:'I'}]}, {id:2,label:'Jogo 2',s:[{seed:'F'},{seed:'B'}]}, {id:3,label:'Jogo 3',s:[{seed:'H'},{seed:'E'}]} ],
-      [ {id:5,label:'Jogo 5',s:[{seed:'A'},{win:1}]}, {id:6,label:'Jogo 6',s:[{win:2},{win:3}]} ],
+      [ {id:1,label:'Jogo 1',s:[{seed:'C'},{seed:'I'}]},
+        {id:2,label:'Jogo 2',s:[{seed:'F'},{seed:'B'}]},
+        {id:3,label:'Jogo 3',s:[{seed:'H'},{seed:'E'}]} ],
+      [ {id:5,label:'Jogo 5',s:[{seed:'A'},{win:1}]},
+        {id:6,label:'Jogo 6',s:[{win:2},{win:3}]} ],
       [ {id:10,label:'Semifinal',s:[{win:5},{win:6}]} ],
       [ {id:12,label:'Final',s:[{win:10},{win:11}]} ],
     ],
     losers:[
       [ {id:4,label:'Jogo 4',s:[{lose:2},{lose:3}]} ],
-      [ {id:7,label:'Jogo 7',s:[{lose:6},{lose:1}]}, {id:8,label:'Jogo 8',s:[{lose:5},{win:4}]} ],
+      [ {id:7,label:'Jogo 7',s:[{lose:6},{lose:1}]},
+        {id:8,label:'Jogo 8',s:[{lose:5},{win:4}]} ],
       [ {id:9,label:'Jogo 9',s:[{win:7},{win:8}]} ],
       [ {id:11,label:'Final perd.',s:[{lose:10},{win:9}]} ],
     ]
   },
   8:{
     winners:[
-      [ {id:1,label:'Jogo 1',s:[{seed:'A'},{seed:'H'}]}, {id:2,label:'Jogo 2',s:[{seed:'D'},{seed:'E'}]}, {id:3,label:'Jogo 3',s:[{seed:'C'},{seed:'F'}]}, {id:4,label:'Jogo 4',s:[{seed:'B'},{seed:'G'}]} ],
-      [ {id:7,label:'Jogo 7',s:[{win:1},{win:2}]}, {id:8,label:'Jogo 8',s:[{win:3},{win:4}]} ],
+      [ {id:1,label:'Jogo 1',s:[{seed:'A'},{seed:'H'}]},
+        {id:2,label:'Jogo 2',s:[{seed:'D'},{seed:'E'}]},
+        {id:3,label:'Jogo 3',s:[{seed:'C'},{seed:'F'}]},
+        {id:4,label:'Jogo 4',s:[{seed:'B'},{seed:'G'}]} ],
+      [ {id:7,label:'Jogo 7',s:[{win:1},{win:2}]},
+        {id:8,label:'Jogo 8',s:[{win:3},{win:4}]} ],
       [ {id:12,label:'Semifinal',s:[{win:7},{win:8}]} ],
       [ {id:14,label:'Final',s:[{win:12},{win:13}]} ],
     ],
     losers:[
-      [ {id:5,label:'Jogo 5',s:[{lose:1},{lose:2}]}, {id:6,label:'Jogo 6',s:[{lose:3},{lose:4}]} ],
-      [ {id:10,label:'Jogo 10',s:[{lose:8},{win:5}]}, {id:9,label:'Jogo 9',s:[{lose:7},{win:6}]} ],
+      [ {id:5,label:'Jogo 5',s:[{lose:1},{lose:2}]},
+        {id:6,label:'Jogo 6',s:[{lose:3},{lose:4}]} ],
+      [ {id:10,label:'Jogo 10',s:[{lose:8},{win:5}]},
+        {id:9,label:'Jogo 9',s:[{lose:7},{win:6}]} ],
       [ {id:11,label:'Jogo 11',s:[{win:10},{win:9}]} ],
       [ {id:13,label:'Final perd.',s:[{lose:12},{win:11}]} ],
     ]
@@ -67,31 +76,45 @@ const MAPS = {
   9:{
     winners:[
       [ {id:1,label:'Jogo 1',s:[{seed:'B'},{seed:'G'}]} ],
-      [ {id:5,label:'Jogo 5',s:[{seed:'D'},{win:1}]}, {id:2,label:'Jogo 2',s:[{seed:'H'},{seed:'C'}]}, {id:3,label:'Jogo 3',s:[{seed:'A'},{seed:'E'}]}, {id:4,label:'Jogo 4',s:[{seed:'F'},{seed:'I'}]} ],
-      [ {id:10,label:'Jogo 10',s:[{win:5},{win:2}]}, {id:9,label:'Jogo 9',s:[{win:3},{win:4}]} ],
+      [ {id:5,label:'Jogo 5',s:[{seed:'D'},{win:1}]},
+        {id:2,label:'Jogo 2',s:[{seed:'H'},{seed:'C'}]},
+        {id:3,label:'Jogo 3',s:[{seed:'A'},{seed:'E'}]},
+        {id:4,label:'Jogo 4',s:[{seed:'F'},{seed:'I'}]} ],
+      [ {id:10,label:'Jogo 10',s:[{win:5},{win:2}]},
+        {id:9,label:'Jogo 9',s:[{win:3},{win:4}]} ],
       [ {id:14,label:'Semifinal',s:[{win:10},{win:9}]} ],
       [ {id:16,label:'Final',s:[{win:14},{win:15}]} ],
     ],
     losers:[
       [ {id:6,label:'Jogo 6',s:[{lose:4},{lose:1}]} ],
-      [ {id:8,label:'Jogo 8',s:[{lose:3},{win:6}]}, {id:7,label:'Jogo 7',s:[{lose:2},{lose:5}]} ],
-      [ {id:12,label:'Jogo 12',s:[{lose:10},{win:8}]}, {id:11,label:'Jogo 11',s:[{lose:9},{win:7}]} ],
+      [ {id:8,label:'Jogo 8',s:[{lose:3},{win:6}]},
+        {id:7,label:'Jogo 7',s:[{lose:2},{lose:5}]} ],
+      [ {id:12,label:'Jogo 12',s:[{lose:10},{win:8}]},
+        {id:11,label:'Jogo 11',s:[{lose:9},{win:7}]} ],
       [ {id:13,label:'Jogo 13',s:[{win:12},{win:11}]} ],
       [ {id:15,label:'Final perd.',s:[{lose:14},{win:13}]} ],
     ]
   },
   10:{
     winners:[
-      [ {id:1,label:'Jogo 1',s:[{seed:'B'},{seed:'G'}]}, {id:2,label:'Jogo 2',s:[{seed:'E'},{seed:'J'}]} ],
-      [ {id:3,label:'Jogo 3',s:[{seed:'A'},{win:1}]}, {id:4,label:'Jogo 4',s:[{seed:'D'},{seed:'I'}]}, {id:5,label:'Jogo 5',s:[{seed:'C'},{seed:'H'}]}, {id:6,label:'Jogo 6',s:[{seed:'F'},{win:2}]} ],
-      [ {id:11,label:'Jogo 11',s:[{win:3},{win:4}]}, {id:12,label:'Jogo 12',s:[{win:5},{win:6}]} ],
+      [ {id:1,label:'Jogo 1',s:[{seed:'B'},{seed:'G'}]},
+        {id:2,label:'Jogo 2',s:[{seed:'E'},{seed:'J'}]} ],
+      [ {id:3,label:'Jogo 3',s:[{seed:'A'},{win:1}]},
+        {id:4,label:'Jogo 4',s:[{seed:'D'},{seed:'I'}]},
+        {id:5,label:'Jogo 5',s:[{seed:'C'},{seed:'H'}]},
+        {id:6,label:'Jogo 6',s:[{seed:'F'},{win:2}]} ],
+      [ {id:11,label:'Jogo 11',s:[{win:3},{win:4}]},
+        {id:12,label:'Jogo 12',s:[{win:5},{win:6}]} ],
       [ {id:16,label:'Semifinal',s:[{win:11},{win:12}]} ],
       [ {id:18,label:'Final',s:[{win:16},{win:17}]} ],
     ],
     losers:[
-      [ {id:8,label:'Jogo 8',s:[{lose:4},{lose:1}]}, {id:7,label:'Jogo 7',s:[{lose:3},{lose:2}]} ],
-      [ {id:10,label:'Jogo 10',s:[{lose:6},{win:8}]}, {id:9,label:'Jogo 9',s:[{lose:5},{win:7}]} ],
-      [ {id:13,label:'Jogo 13',s:[{lose:11},{win:10}]}, {id:14,label:'Jogo 14',s:[{lose:12},{win:9}]} ],
+      [ {id:8,label:'Jogo 8',s:[{lose:4},{lose:1}]},
+        {id:7,label:'Jogo 7',s:[{lose:3},{lose:2}]} ],
+      [ {id:10,label:'Jogo 10',s:[{lose:6},{win:8}]},
+        {id:9,label:'Jogo 9',s:[{lose:5},{win:7}]} ],
+      [ {id:13,label:'Jogo 13',s:[{lose:11},{win:10}]},
+        {id:14,label:'Jogo 14',s:[{lose:12},{win:9}]} ],
       [ {id:15,label:'Jogo 15',s:[{win:13},{win:14}]} ],
       [ {id:17,label:'Final perd.',s:[{lose:16},{win:15}]} ],
     ]
@@ -103,12 +126,10 @@ onAuthStateChanged(auth, async (user) => {
     const snap = await getDoc(doc(db, 'users', user.uid));
     if (snap.exists()) {
       state.currentUser = { uid: user.uid, ...snap.data() };
-      state.currentUser.schoolIds = state.currentUser.schoolIds || (state.currentUser.schoolId ? [state.currentUser.schoolId] : []);
       state.userRole = snap.data().role;
       document.getElementById('userName').textContent = snap.data().name || user.email;
       document.getElementById('loginView').style.display = 'none';
       document.getElementById('appView').style.display = 'flex';
-      
       if (state.userRole === 'admin') {
         document.getElementById('navAdmin').classList.remove('hidden');
         await init();
@@ -140,14 +161,18 @@ function show(viewId) {
   document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
   const el = document.getElementById('view-' + viewId);
   if (el) el.classList.remove('hidden');
+  
   if (viewId === 'teams') { loadSchoolsForChecklist(); }
   if (viewId === 'tournaments') { renderTournamentsList(); }
   if (viewId === 'profTeams') { loadProfTeams(); }
   if (viewId === 'profTournaments') { loadProfTournaments(); }
   if (viewId === 'generalStandings') { renderGeneralStandings(); }
+  
   const sidebar = document.querySelector('.sidebar');
   const overlay = document.querySelector('.sidebar-overlay');
-  if(sidebar && sidebar.classList.contains('active')) toggleSidebar();
+  if(sidebar && sidebar.classList.contains('active')) {
+    toggleSidebar();
+  }
 }
 
 async function login() {
@@ -157,6 +182,7 @@ async function login() {
   try { await signInWithEmailAndPassword(auth, email, password); }
   catch (e) { document.getElementById('loginError').textContent = 'E-mail ou senha inválidos.'; }
 }
+
 async function logout() { await signOut(auth); state.currentUser = null; state.userRole = null; }
 
 function renderDashboard() {
@@ -170,11 +196,16 @@ async function loadSchools() {
   const snap = await getDocs(query(collection(db, 'schools'), orderBy('name')));
   state.schools = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
+
 function renderSchoolsTable() {
   const tbody = document.getElementById('schoolsTable');
   if (state.schools.length === 0) { tbody.innerHTML = '<tr><td colspan="2" class="empty">Nenhuma escola cadastrada.</td></tr>'; return; }
-  tbody.innerHTML = state.schools.map(s => `<tr><td>${s.name}</td><td><button onclick="app.openSchoolModal('${s.id}')">Editar</button> <button class="danger" onclick="app.deleteSchool('${s.id}')">Excluir</button></td></tr>`).join('');
+  tbody.innerHTML = state.schools.map(s => `
+    <tr><td>${s.name}</td>
+      <td><button onclick="app.openSchoolModal('${s.id}')">Editar</button>
+      <button class="danger" onclick="app.deleteSchool('${s.id}')">Excluir</button></td></tr>`).join('');
 }
+
 function openSchoolModal(id) {
   const isEdit = !!id;
   const school = isEdit ? state.schools.find(s => s.id === id) : null;
@@ -182,6 +213,7 @@ function openSchoolModal(id) {
     <input id="schoolName" value="${school ? school.name : ''}" placeholder="Nome da escola">
     <button onclick="app.saveSchool('${id || ''}')">Salvar</button>`);
 }
+
 async function saveSchool(id) {
   const name = document.getElementById('schoolName').value.trim();
   if (!name) return alert('Informe o nome da escola.');
@@ -189,6 +221,7 @@ async function saveSchool(id) {
   await setDoc(ref, { name }, { merge: true });
   closeModal(); await loadSchools(); renderSchoolsTable(); loadSchoolsForChecklist(); renderDashboard();
 }
+
 async function deleteSchool(id) {
   if (!confirm('Excluir esta escola?')) return;
   await deleteDoc(doc(db, 'schools', id));
@@ -199,17 +232,28 @@ async function loadProfessors() {
   const snap = await getDocs(query(collection(db, 'users'), where('role', '==', 'professor')));
   state.professors = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
+
 function renderProfessorsTable() {
   const tbody = document.getElementById('professorsTable');
   if (state.professors.length === 0) { tbody.innerHTML = '<tr><td colspan="3" class="empty">Nenhum professor.</td></tr>'; return; }
-  tbody.innerHTML = state.professors.map(p => `<tr><td>${p.name}</td><td>${p.email}</td><td><button onclick="app.openProfessorModal('${p.id}')">Editar</button> <button class="danger" onclick="app.deleteProfessor('${p.id}')">Excluir</button></td></tr>`).join('');
+  tbody.innerHTML = state.professors.map(p => `
+    <tr><td>${p.name}</td><td>${p.email}</td>
+      <td><button onclick="app.openProfessorModal('${p.id}')">Editar</button>
+      <button class="danger" onclick="app.deleteProfessor('${p.id}')">Excluir</button></td></tr>`).join('');
 }
+
+// ----------------------------------------------------
+// ATUALIZADO: SALVAR PROFESSOR (Múltiplas Escolas)
+// ----------------------------------------------------
 async function saveProfessor(id) {
   const name = document.getElementById('profName').value.trim();
   const email = document.getElementById('profEmail').value.trim();
   const password = document.getElementById('profPassword').value;
+  
+  // Captura todas as escolas marcadas no checkbox
   const checked = document.querySelectorAll('#profSchoolsChecklist input[type="checkbox"]:checked');
   const schoolIds = Array.from(checked).map(c => c.value);
+
   if (!name || !email || schoolIds.length === 0) return alert('Preencha nome, e-mail e selecione pelo menos uma escola.');
   
   if (!id) {
@@ -221,6 +265,7 @@ async function saveProfessor(id) {
     const data = await res.json();
     if (!res.ok) return alert('Erro ao criar usuário: ' + (data.error?.message || 'Erro desconhecido'));
     id = data.localId;
+    // Salva com array 'schoolIds'
     await setDoc(doc(db, 'users', id), { email, name, role: 'professor', schoolIds });
   } else {
     await updateDoc(doc(db, 'users', id), { name, email, schoolIds });
@@ -229,22 +274,39 @@ async function saveProfessor(id) {
   await setDoc(doc(db, 'professors', id), { name, email, schoolIds }, { merge: true });
   closeModal(); await loadProfessors(); renderProfessorsTable(); renderDashboard();
 }
+
+// ----------------------------------------------------
+// ATUALIZADO: MODAL DO PROFESSOR (Múltiplas Escolas)
+// ----------------------------------------------------
 function openProfessorModal(id) {
   const isEdit = !!id;
   const prof = isEdit ? state.professors.find(p => p.id === id) : null;
+  
+  // Recupera escolas do professor (lidando com dados antigos que usavam schoolId string)
   const pSchools = prof ? (prof.schoolIds || (prof.schoolId ? [prof.schoolId] : [])) : [];
-  const schoolsHtml = state.schools.map(s => `<div class="school-check-item"><input type="checkbox" value="${s.id}" id="pschk_${s.id}" ${pSchools.includes(s.id) ? 'checked' : ''}><label for="pschk_${s.id}">${s.name}</label></div>`).join('');
+
+  const schoolsHtml = state.schools.map(s => `
+    <div class="school-check-item">
+      <input type="checkbox" value="${s.id}" id="pschk_${s.id}" ${pSchools.includes(s.id) ? 'checked' : ''}>
+      <label for="pschk_${s.id}">${s.name}</label>
+    </div>
+  `).join('');
 
   openModal(`
     <div class="modal-header"><h3>${isEdit ? 'Editar' : 'Novo'} Professor</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
     <input id="profName" value="${prof ? prof.name : ''}" placeholder="Nome completo">
     <input id="profEmail" value="${prof ? prof.email : ''}" placeholder="E-mail">
     <input id="profPassword" type="password" placeholder="${isEdit ? 'Nova senha (deixe em branco para não alterar)' : 'Senha de acesso'}">
+    
     <label style="font-weight:600; display:block; margin-bottom:8px; margin-top:10px;">Escolas Vinculadas:</label>
-    <div class="schools-checklist" id="profSchoolsChecklist" style="margin-bottom:16px;">${schoolsHtml || '<div class="empty">Nenhuma escola cadastrada.</div>'}</div>
+    <div class="schools-checklist" id="profSchoolsChecklist" style="margin-bottom:16px;">
+      ${schoolsHtml || '<div class="empty">Nenhuma escola cadastrada.</div>'}
+    </div>
+    
     <button onclick="app.saveProfessor('${id || ''}')">Salvar</button>
   `);
 }
+
 async function deleteProfessor(id) {
   if (!confirm('Excluir professor?')) return;
   await deleteDoc(doc(db, 'professors', id)); await deleteDoc(doc(db, 'users', id));
@@ -255,15 +317,22 @@ async function loadTeams() {
   const snap = await getDocs(collection(db, 'teams'));
   state.teams = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
+
 function loadSchoolsForChecklist() {
   const container = document.getElementById('schoolsChecklist');
   if (state.schools.length === 0) { container.innerHTML = '<div class="empty">Nenhuma escola cadastrada. Cadastre escolas primeiro.</div>'; return; }
-  container.innerHTML = state.schools.map(s => `<div class="school-check-item"><input type="checkbox" value="${s.id}" id="chk_${s.id}" data-name="${s.name}"><label for="chk_${s.id}">${s.name}</label></div>`).join('');
+  container.innerHTML = state.schools.map(s => `
+    <div class="school-check-item">
+      <input type="checkbox" value="${s.id}" id="chk_${s.id}" data-name="${s.name}">
+      <label for="chk_${s.id}">${s.name}</label>
+    </div>`).join('');
 }
+
 function toggleSelectAllSchools() {
   const all = document.getElementById('selectAllSchools').checked;
   document.querySelectorAll('#schoolsChecklist input[type="checkbox"]').forEach(c => c.checked = all);
 }
+
 async function createBatchTeams() {
   const modality = document.getElementById('teamBatchModality').value;
   const category = document.getElementById('teamBatchCategory').value;
@@ -281,8 +350,10 @@ async function createBatchTeams() {
   checked.forEach(cb => {
     const schoolId = cb.value;
     const school = state.schools.find(s => s.id === schoolId);
+    const teamName = school ? school.name : 'Escola';
+    
     const teamRef = doc(collection(db, 'teams'));
-    batch.set(teamRef, { name: school ? school.name : 'Escola', schoolId, modality, category, gender, tournamentId, createdAt: new Date().toISOString(), athletes: [] });
+    batch.set(teamRef, { name: teamName, schoolId, modality, category, gender, tournamentId, createdAt: new Date().toISOString(), athletes: [] });
     newTeamIds.push(teamRef.id);
   });
   const allTeamIds = [...existingTeamIds, ...newTeamIds];
@@ -297,11 +368,12 @@ async function loadTournaments() {
   const snap = await getDocs(collection(db, 'tournaments'));
   state.tournaments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
+
 function renderTournamentsList() {
   const container = document.getElementById('tournamentsList');
-  if (state.tournaments.length === 0) { container.innerHTML = '<div class="empty">Nenhum torneio criado.</div>'; return; }
+  if (state.tournaments.length === 0) { container.innerHTML = '<div class="empty">Nenhum torneio criado. Cadastre times na aba "Times" para gerar torneios automaticamente.</div>'; return; }
   container.innerHTML = state.tournaments.map(t => {
-    const statusLabel = t.status === 'pending' ? 'Pendente' : t.status === 'active' ? 'Em andamento' : 'Finalizado';
+    const statusLabel = statusToLabel(t.status);
     return `<div class="card tournament-list-card">
       <div style="cursor:pointer;" onclick="app.openTournamentDetail('${t.id}')">
         <h4><span class="badge ${t.modality}">${MODALITY_LABELS[t.modality]}</span> ${t.name}</h4>
@@ -316,18 +388,19 @@ function renderTournamentsList() {
   }).join('');
 }
 
-// ------------------------------------------------------------
-// FUNÇÃO BASE MODAL (ATUALIZADA PARA SUPORTAR WIDE)
-// ------------------------------------------------------------
-function openModal(html, isWide = false) {
-  const content = document.getElementById('modalContent');
-  content.innerHTML = html;
-  if(isWide) content.classList.add('modal-wide');
-  else content.classList.remove('modal-wide');
+function statusToLabel(s) {
+  return s === 'pending' ? 'Pendente' : s === 'active' ? 'Em andamento' : s === 'finished' ? 'Finalizado' : 'Pendente';
+}
+
+function openModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
   document.getElementById('modalOverlay').style.display = 'flex';
 }
 function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
 
+// ============================================================
+// GERENCIAMENTO DE TORNEIOS
+// ============================================================
 
 function openEditTournamentModal(id) {
   const t = state.tournaments.find(x => x.id === id) || state.currentTournament;
@@ -338,90 +411,309 @@ function openEditTournamentModal(id) {
     <input id="editTournamentName" value="${t.name}" placeholder="Nome do torneio">
     <button onclick="app.saveTournamentName('${id}')">Salvar</button>`);
 }
+
 async function saveTournamentName(id) {
   const name = document.getElementById('editTournamentName').value.trim();
   if (!name) return alert('Informe o nome do torneio.');
   await updateDoc(doc(db, 'tournaments', id), { name, updatedAt: new Date().toISOString() });
-  closeModal(); await loadTournaments(); renderTournamentsList();
-  if (state.currentTournament && state.currentTournament.id === id) { state.currentTournament.name = name; document.getElementById('tdName').textContent = name; }
+  closeModal();
+  await loadTournaments();
+  renderTournamentsList();
+  renderDashboard();
+  if (state.currentTournament && state.currentTournament.id === id) {
+    state.currentTournament.name = name;
+    const tdName = document.getElementById('tdName');
+    if (tdName) tdName.textContent = name;
+  }
+  alert('Nome do torneio atualizado!');
 }
 
 function openManageTeamsModal(id) {
   const t = state.tournaments.find(x => x.id === id) || state.currentTournament;
   if (!t) return;
   const currentTeamIds = t.teamIds || [];
-  const eligibleTeams = state.teams.filter(team => team.modality === t.modality && team.category === t.category && team.gender === t.gender);
-  currentTeamIds.forEach(tid => { if (!eligibleTeams.some(e => e.id === tid)) { const extra = state.teams.find(x => x.id === tid); if (extra) eligibleTeams.push(extra); }});
-  const warn = t.status !== 'pending' ? `<p class="small" style="color:var(--danger); margin-bottom:12px;">⚠️ Alterar as equipas <b>resetará o chaveamento</b>.</p>` : '';
-  const listHtml = eligibleTeams.length === 0 ? '<div class="empty">Nenhuma equipa elegível.</div>' : eligibleTeams.map(team => `<div class="school-check-item"><input type="checkbox" value="${team.id}" id="mng_${team.id}" ${currentTeamIds.includes(team.id) ? 'checked' : ''}><label for="mng_${team.id}">${team.name}</label></div>`).join('');
-  openModal(`<div class="modal-header"><h3>Gerenciar Equipas</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>${warn}<div class="schools-checklist" id="manageTeamsChecklist">${listHtml}</div><button onclick="app.saveTournamentTeams('${id}')">Salvar</button>`);
+  const eligibleTeams = state.teams.filter(team =>
+    team.modality === t.modality && team.category === t.category && team.gender === t.gender
+  );
+  currentTeamIds.forEach(tid => {
+    if (!eligibleTeams.some(e => e.id === tid)) {
+      const extra = state.teams.find(x => x.id === tid);
+      if (extra) eligibleTeams.push(extra);
+    }
+  });
+
+  const warn = t.status !== 'pending'
+    ? `<p class="small" style="color:var(--danger); margin-bottom:12px;">⚠️ Este torneio já foi iniciado. Alterar os times <b>resetará o chaveamento</b> (resultados serão apagados).</p>`
+    : '';
+
+  const listHtml = eligibleTeams.length === 0
+    ? '<div class="empty">Nenhum time elegível. Cadastre times nesta modalidade/categoria/naipe.</div>'
+    : eligibleTeams.map(team => `
+      <div class="school-check-item">
+        <input type="checkbox" value="${team.id}" id="mng_${team.id}" ${currentTeamIds.includes(team.id) ? 'checked' : ''}>
+        <label for="mng_${team.id}">${team.name}</label>
+      </div>`).join('');
+
+  openModal(`
+    <div class="modal-header"><h3>Gerenciar Times</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
+    ${warn}
+    <p class="small mb">Marque os times que devem participar deste torneio.</p>
+    <div class="schools-checklist" id="manageTeamsChecklist">${listHtml}</div>
+    <button onclick="app.saveTournamentTeams('${id}')">Salvar Times</button>`);
 }
+
 async function saveTournamentTeams(id) {
   const t = state.tournaments.find(x => x.id === id) || state.currentTournament;
   if (!t) return;
   const checked = document.querySelectorAll('#manageTeamsChecklist input[type="checkbox"]:checked');
   const newTeamIds = Array.from(checked).map(c => c.value);
+
   const wasStarted = t.status !== 'pending';
-  if (wasStarted && !confirm('Alterar as equipas irá RESETAR o chaveamento. Continuar?')) return;
+  if (wasStarted) {
+    if (!confirm('Alterar os times irá RESETAR o chaveamento (resultados serão apagados). Continuar?')) return;
+  }
+
   const updateData = { teamIds: newTeamIds, updatedAt: new Date().toISOString() };
-  if (wasStarted) { updateData.status = 'pending'; updateData.seeds = {}; updateData.results = {}; updateData.bracketSize = null; }
+  if (wasStarted) {
+    updateData.status = 'pending';
+    updateData.seeds = {};
+    updateData.results = {};
+    updateData.bracketSize = null;
+  }
+
   await updateDoc(doc(db, 'tournaments', id), updateData);
   closeModal(); await loadTournaments(); renderTournamentsList(); renderDashboard();
-  if (state.currentTournament && state.currentTournament.id === id) { const fresh = await getDoc(doc(db, 'tournaments', id)); state.currentTournament = { id: fresh.id, ...fresh.data() }; renderTournamentDetail(state.currentTournament); }
-}
-async function deleteTournament(id) {
-  if (!confirm(`Excluir este torneio? As equipas NÃO serão excluídas.`)) return;
-  await deleteDoc(doc(db, 'tournaments', id)); await loadTournaments(); renderTournamentsList(); renderDashboard();
-  if (state.currentTournament && state.currentTournament.id === id) { state.currentTournament = null; show('tournaments'); }
+
+  if (state.currentTournament && state.currentTournament.id === id) {
+    const fresh = await getDoc(doc(db, 'tournaments', id));
+    state.currentTournament = { id: fresh.id, ...fresh.data() };
+    renderTournamentDetail(state.currentTournament);
+  }
+  alert('Times do torneio atualizados!');
 }
 
+async function deleteTournament(id) {
+  const t = state.tournaments.find(x => x.id === id) || state.currentTournament;
+  const name = t ? t.name : 'este torneio';
+  if (!confirm(`Excluir o torneio "${name}"?\n\nOs TIMES NÃO serão excluídos, apenas o torneio.`)) return;
+  await deleteDoc(doc(db, 'tournaments', id));
+  await loadTournaments(); renderTournamentsList(); renderDashboard();
+  if (state.currentTournament && state.currentTournament.id === id) {
+    state.currentTournament = null; show('tournaments');
+  }
+  alert('Torneio excluído!');
+}
+
+// ============================================================
+// MODAL DE SÚMULA / PLANTEL (CLIQUE NO CHAVEAMENTO)
+// ============================================================
+
+async function openTeamSquadModal(teamId) {
+  if (!teamId) return;
+  const tSnap = await getDoc(doc(db, 'teams', teamId));
+  if (!tSnap.exists()) return;
+  const team = { id: tSnap.id, ...tSnap.data() };
+  state.currentSquadTeam = team;
+
+  // Lógica de permissão: Admins não editam, Professores editam apenas times das SUAS escolas.
+  const userSchools = state.currentUser ? (state.currentUser.schoolIds || (state.currentUser.schoolId ? [state.currentUser.schoolId] : [])) : [];
+  const isOwnerProfessor = state.userRole === 'professor' && userSchools.includes(team.schoolId);
+  const isEditable = isOwnerProfessor;
+
+  let html = `
+    <div class="modal-header">
+      <h3 style="display:flex; align-items:center; gap:8px;">📋 Súmula / Plantel <span style="font-size:1rem; font-weight:normal; color:#666;">(${team.name})</span></h3>
+      <button class="close-btn" onclick="app.closeModal()">×</button>
+    </div>`;
+  
+  html += `<p class="small mb"><span class="badge ${team.modality}">${MODALITY_LABELS[team.modality]}</span> <span class="badge ${team.category}">${CATEGORY_LABELS[team.category]}</span> <span class="badge ${team.gender}">${GENDER_LABELS[team.gender]}</span></p>`;
+
+  if (isEditable) {
+    html += `
+      <div class="flex mb athlete-inputs mt">
+        <input type="text" id="squadAthleteName" placeholder="Nome do atleta">
+        <input type="number" id="squadAthleteNumber" placeholder="Nº">
+        <button onclick="app.addAthleteToSquad('${team.id}')">Adicionar</button>
+      </div>
+    `;
+  } else {
+    html += `<p class="small mb mt" style="color:var(--primary); font-weight:500;">Visualização de Plantel (Apenas leitura)</p>`;
+  }
+
+  html += `
+    <div class="table-responsive mt">
+      <table>
+        <thead><tr><th style="width: 50px; text-align:center;">Nº</th><th>Nome do Atleta</th>${isEditable ? '<th style="width: 80px;">Ações</th>' : ''}</tr></thead>
+        <tbody id="squadAthletesTable"></tbody>
+      </table>
+    </div>
+  `;
+
+  openModal(html);
+  renderSquadTable(team, isEditable);
+}
+
+function renderSquadTable(team, isEditable) {
+  const tbody = document.getElementById('squadAthletesTable');
+  if (!tbody) return;
+  const athletes = team.athletes || [];
+  if (athletes.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${isEditable ? 3 : 2}" class="empty">Nenhum atleta registado nesta equipa.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = athletes
+    .map((a, i) => ({ ...a, _idx: i }))
+    .sort((x, y) => (x.number || 0) - (y.number || 0))
+    .map(a => `
+      <tr>
+        <td style="text-align:center; font-weight:bold;">${a.number ?? '-'}</td>
+        <td>${a.name}</td>
+        ${isEditable ? `<td><button class="danger small-btn" style="padding:4px 8px; margin:0;" onclick="app.removeAthleteFromSquad('${team.id}', ${a._idx})">Excluir</button></td>` : ''}
+      </tr>`).join('');
+}
+
+async function addAthleteToSquad(teamId) {
+  const name = document.getElementById('squadAthleteName').value.trim();
+  const number = document.getElementById('squadAthleteNumber').value;
+  if (!name) return alert('Informe o nome do atleta.');
+
+  const team = state.currentSquadTeam;
+  if (!team || team.id !== teamId) return;
+
+  const athletes = team.athletes ? [...team.athletes] : [];
+  athletes.push({ name, number: number ? parseInt(number) : null });
+
+  await updateDoc(doc(db, 'teams', teamId), { athletes });
+  team.athletes = athletes;
+
+  const tIdx = state.teams.findIndex(t => t.id === teamId);
+  if(tIdx > -1) state.teams[tIdx].athletes = athletes;
+  const ptIdx = state.profTeams.findIndex(t => t.id === teamId);
+  if(ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
+
+  document.getElementById('squadAthleteName').value = '';
+  document.getElementById('squadAthleteNumber').value = '';
+  renderSquadTable(team, true);
+
+  if (state.currentTeam && state.currentTeam.id === teamId) {
+    state.currentTeam.athletes = athletes;
+    if(document.getElementById('athletesTable')) renderAthletes();
+  }
+}
+
+async function removeAthleteFromSquad(teamId, idx) {
+  if (!confirm('Remover este atleta?')) return;
+  const team = state.currentSquadTeam;
+  if (!team || team.id !== teamId) return;
+
+  const athletes = (team.athletes || []).filter((_, i) => i !== idx);
+  await updateDoc(doc(db, 'teams', teamId), { athletes });
+  team.athletes = athletes;
+
+  const tIdx = state.teams.findIndex(t => t.id === teamId);
+  if(tIdx > -1) state.teams[tIdx].athletes = athletes;
+  const ptIdx = state.profTeams.findIndex(t => t.id === teamId);
+  if(ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
+
+  renderSquadTable(team, true);
+
+  if (state.currentTeam && state.currentTeam.id === teamId) {
+    state.currentTeam.athletes = athletes;
+    if(document.getElementById('athletesTable')) renderAthletes();
+  }
+}
 
 // ============================================================
 // CHAVEAMENTO DUPLA ELIMINAÇÃO
 // ============================================================
+
 function teamNameClickable(id) {
   if (!id) return '<span class="bye">—</span>';
   const t = state.teams.find(x => x.id === id);
   const name = t ? t.name : 'Equipa';
-  return `<span style="cursor:pointer; display:inline-flex; align-items:center; gap:4px; color:var(--primary); transition:opacity 0.2s;" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" onclick="app.openTeamSquadModal('${id}')" title="Ver Plantel"><span style="font-size:0.85rem;">📋</span><span style="text-decoration:underline; text-decoration-color:#b0bec5; text-underline-offset:3px;">${name}</span></span>`;
+  return `<span style="cursor:pointer; display:inline-flex; align-items:center; gap:4px; color:var(--primary); transition:opacity 0.2s;" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" onclick="app.openTeamSquadModal('${id}')" title="Ver Súmula / Plantel">
+    <span style="font-size:0.85rem;">📋</span> 
+    <span style="text-decoration:underline; text-decoration-color:#b0bec5; text-underline-offset:3px;">${name}</span>
+  </span>`;
 }
-function matchById(map, id) { let found = null; ['winners','losers'].forEach(k => map[k].forEach(col => col.forEach(m => { if (m.id === id) found = m; }))); return found; }
+
+function matchById(map, id) {
+  let found = null;
+  ['winners','losers'].forEach(k => map[k].forEach(col => col.forEach(m => { if (m.id === id) found = m; })));
+  return found;
+}
+
 function resolveSlot(map, slot, seeds, results) {
   if (slot.seed !== undefined) return { teamId: seeds[slot.seed] || null, decided: true, feedLabel: null };
-  if (slot.win !== undefined) { const r = results[slot.win]; if (r !== undefined) { const m = matchById(map, slot.win); const wIdx = typeof r === 'object' ? r.winner : r; return resolveSlot(map, m.s[wIdx], seeds, results); } return { teamId: null, decided: false, feedLabel: 'Venc. ' + slot.win }; }
-  if (slot.lose !== undefined) { const r = results[slot.lose]; if (r !== undefined) { const m = matchById(map, slot.lose); const wIdx = typeof r === 'object' ? r.winner : r; return resolveSlot(map, m.s[1 - wIdx], seeds, results); } return { teamId: null, decided: false, feedLabel: 'Perd. ' + slot.lose }; }
+  if (slot.win !== undefined) {
+    const r = results[slot.win];
+    if (r !== undefined) {
+      const m = matchById(map, slot.win);
+      const wIdx = typeof r === 'object' ? r.winner : r; 
+      return resolveSlot(map, m.s[wIdx], seeds, results);
+    }
+    return { teamId: null, decided: false, feedLabel: 'Venc. Jogo ' + slot.win };
+  }
+  if (slot.lose !== undefined) {
+    const r = results[slot.lose];
+    if (r !== undefined) {
+      const m = matchById(map, slot.lose);
+      const wIdx = typeof r === 'object' ? r.winner : r;
+      return resolveSlot(map, m.s[1 - wIdx], seeds, results);
+    }
+    return { teamId: null, decided: false, feedLabel: 'Perd. Jogo ' + slot.lose };
+  }
   return { teamId: null, decided: false, feedLabel: '?' };
 }
+
+function isFinalGame(label) { return label === 'Final' || label === 'Final perd.'; }
 
 function renderMatchCardDE(map, m, seeds, results, readOnly, tournamentId) {
   const a = resolveSlot(map, m.s[0], seeds, results);
   const b = resolveSlot(map, m.s[1], seeds, results);
   const resultData = results[m.id];
   const winnerIdx = resultData !== undefined ? (typeof resultData === 'object' ? resultData.winner : resultData) : undefined;
+  
   const scoreA = resultData !== undefined && typeof resultData === 'object' ? resultData.scoreA : (winnerIdx === 0 ? '✓' : '-');
   const scoreB = resultData !== undefined && typeof resultData === 'object' ? resultData.scoreB : (winnerIdx === 1 ? '✓' : '-');
   
   const bothDecided = a.decided && b.decided;
-  const isFinal = m.label.includes('Final');
+  const isFinal = isFinalGame(m.label);
   const cardClass = isFinal ? 'grand-final' : (m.label.startsWith('Final perd') ? 'loser-bracket' : 'winner-bracket');
   const canEdit = !readOnly && bothDecided && winnerIdx === undefined;
 
   const sideHtml = (info, idx, score) => {
-    const label = info.decided ? `<span class="team-name ${winnerIdx === idx ? 'winner' : ''}">${teamNameClickable(info.teamId)}</span>` : `<span class="pending-feed">${info.feedLabel}</span>`;
-    const inputHtml = canEdit ? `<input type="number" id="match_${m.id}_score${idx}" class="inline-score" placeholder="-">` : (resultData !== undefined ? `<span class="score-display">${score}</span>` : '');
+    const isWin = winnerIdx === idx;
+    const label = info.decided
+      ? `<span class="team-name ${isWin ? 'winner' : ''}">${teamNameClickable(info.teamId)}</span>`
+      : `<span class="pending-feed">${info.feedLabel}</span>`;
+    
+    const inputHtml = canEdit 
+      ? `<input type="number" id="match_${m.id}_score${idx}" class="inline-score" placeholder="-">`
+      : (resultData !== undefined ? `<span class="score-display">${score}</span>` : '');
+
     return `<div class="match-side">${label} ${inputHtml}</div>`;
   };
 
   const actionHtml = winnerIdx !== undefined && !readOnly
     ? `<button class="secondary small-btn" onclick="app.undoMatchResultDE('${tournamentId}', ${m.id})">Desfazer</button>`
     : canEdit
-      ? `<div style="display:flex; flex-direction:column; gap:4px;">
-           <button class="secondary small-btn" style="background:#e0e0e0; color:#333; border: 1px solid #ccc;" onclick="app.openSumulaModal('${tournamentId}', ${m.id})">⚽ Súmula</button>
-           <button class="accent small-btn" onclick="app.saveInlineResultDE('${tournamentId}', ${m.id})">Salvar</button>
-         </div>`
-      : bothDecided && readOnly ? '<span class="badge" style="background:#fffde7;">Aguardando</span>' : '';
+      ? `<button class="accent small-btn" onclick="app.saveInlineResultDE('${tournamentId}', ${m.id})">Salvar</button>`
+      : bothDecided && readOnly 
+        ? '<span class="badge" style="background:#fffde7;">Aguardando</span>'
+        : '';
 
-  return `<div class="match-card ${cardClass}"><div class="match-teams"><div style="font-size:0.7rem; color:#999; margin-bottom:6px;">${m.label}</div>${sideHtml(a, 0, scoreA)}<div class="match-vs">vs</div>${sideHtml(b, 1, scoreB)}</div>${actionHtml ? `<div class="match-actions">${actionHtml}</div>` : ''}</div>`;
+  return `
+    <div class="match-card ${cardClass}">
+      <div class="match-teams">
+        <div style="font-size:0.7rem; color:#999; margin-bottom:6px;">${m.label}</div>
+        ${sideHtml(a, 0, scoreA)}
+        <div class="match-vs">vs</div>
+        ${sideHtml(b, 1, scoreB)}
+      </div>
+      ${actionHtml ? `<div class="match-actions">${actionHtml}</div>` : ''}
+    </div>`;
 }
 
 function renderBracketDE(tournament, containerId, readOnly) {
@@ -433,10 +725,21 @@ function renderBracketDE(tournament, containerId, readOnly) {
   const results = tournament.results || {};
 
   let html = '<div class="bracket-round"><h4>🏅 Chave dos Vencedores</h4><div class="bracket-cols">';
-  map.winners.forEach((col, i) => { html += `<div class="bracket-col"><div class="col-label">Fase ${i+1}</div>`; col.forEach(m => { html += renderMatchCardDE(map, m, seeds, results, readOnly, tournament.id); }); html += '</div>'; });
-  html += '</div></div><div class="bracket-round"><h4>🔄 Chave dos Perdedores (Repescagem)</h4><div class="bracket-cols">';
-  map.losers.forEach((col, i) => { html += `<div class="bracket-col"><div class="col-label">Fase ${i+1}</div>`; col.forEach(m => { html += renderMatchCardDE(map, m, seeds, results, readOnly, tournament.id); }); html += '</div>'; });
+  map.winners.forEach((col, i) => {
+    html += `<div class="bracket-col"><div class="col-label">Fase ${i+1}</div>`;
+    col.forEach(m => { html += renderMatchCardDE(map, m, seeds, results, readOnly, tournament.id); });
+    html += '</div>';
+  });
   html += '</div></div>';
+
+  html += '<div class="bracket-round"><h4>🔄 Chave dos Perdedores (Repescagem)</h4><div class="bracket-cols">';
+  map.losers.forEach((col, i) => {
+    html += `<div class="bracket-col"><div class="col-label">Fase ${i+1}</div>`;
+    col.forEach(m => { html += renderMatchCardDE(map, m, seeds, results, readOnly, tournament.id); });
+    html += '</div>';
+  });
+  html += '</div></div>';
+
   container.innerHTML = html;
 }
 
@@ -458,332 +761,267 @@ async function openTournamentDetail(id) {
 
 function renderTournamentDetail(tournament) {
   document.getElementById('tdName').textContent = tournament.name;
-  document.getElementById('tdInfo').innerHTML = `<span class="badge ${tournament.modality}">${MODALITY_LABELS[tournament.modality]}</span> <span class="badge ${tournament.category}">${CATEGORY_LABELS[tournament.category]}</span> <span class="badge ${tournament.gender}">${GENDER_LABELS[tournament.gender]}</span> <span class="badge" style="text-transform:capitalize; margin-left:6px;">${tStatusLabel(tournament.status)}</span>`;
+  document.getElementById('tdInfo').innerHTML = `
+    <span class="badge ${tournament.modality}">${MODALITY_LABELS[tournament.modality]}</span>
+    <span class="badge ${tournament.category}">${CATEGORY_LABELS[tournament.category]}</span>
+    <span class="badge ${tournament.gender}">${GENDER_LABELS[tournament.gender]}</span>
+    <span class="badge" style="text-transform:capitalize; margin-left:6px;">${statusToLabel(tournament.status)}</span>`;
   const teamsList = document.getElementById('tdTeamsList');
-  teamsList.innerHTML = (tournament.teamIds || []).length === 0 ? '<div class="empty">Nenhum time.</div>' : tournament.teamIds.map(tid => { const t = state.teams.find(x => x.id === tid); return `<span class="badge" style="background:#e3f2fd; margin:2px; display:inline-block;">${t ? t.name : tid}</span>`; }).join('');
+  const teamIds = tournament.teamIds || [];
+  teamsList.innerHTML = teamIds.length === 0
+    ? '<div class="empty">Nenhum time.</div>'
+    : teamIds.map(tid => { const t = state.teams.find(x => x.id === tid); return `<span class="badge" style="background:#e3f2fd; margin:2px; display:inline-block;">${t ? t.name : tid}</span>`; }).join('');
+  
   const actions = document.getElementById('tournamentActionButtons');
   if (tournament.status === 'pending' && state.userRole === 'admin') actions.classList.remove('hidden'); else actions.classList.add('hidden');
+  
   renderStandings(tournament, 'tdStandings');
   renderBracketDE(tournament, 'tdBracket', state.userRole !== 'admin');
 }
-function tStatusLabel(s) { return s === 'pending' ? 'Pendente' : s === 'active' ? 'Em andamento' : 'Finalizado'; }
 
 async function shuffleTournamentTeams() {
-  const t = state.currentTournament;
-  if (!t || t.status !== 'pending') return alert('Só pode embaralhar antes de iniciar.');
-  t.teamIds = [...t.teamIds].sort(() => Math.random() - 0.5);
-  await updateDoc(doc(db, 'tournaments', t.id), { teamIds: t.teamIds, updatedAt: new Date().toISOString() });
-  renderTournamentDetail(t);
+  const tournament = state.currentTournament;
+  if (!tournament || tournament.status !== 'pending') return alert('Só pode embaralhar antes de iniciar.');
+  const shuffled = [...tournament.teamIds].sort(() => Math.random() - 0.5);
+  tournament.teamIds = shuffled;
+  await updateDoc(doc(db, 'tournaments', tournament.id), { teamIds: shuffled, updatedAt: new Date().toISOString() });
+  renderTournamentDetail(tournament);
+  alert('Ordem das equipes embaralhada!');
 }
 
 async function startTournament() {
-  let t = state.currentTournament;
-  if (!t) return;
-  const n = (t.teamIds || []).length;
-  if (n < 7 || n > 10) return alert(`Suporta apenas 7 a 10 times. Este tem ${n}.`);
-  const seeds = {}; seedsEmUso(MAPS[n]).forEach((k, i) => { seeds[k] = t.teamIds[i] || null; });
-  await updateDoc(doc(db, 'tournaments', t.id), { bracketSize: n, seeds, results: {}, status: 'active', startedAt: new Date().toISOString() });
-  alert('Iniciado!'); openTournamentDetail(t.id);
+  let tournament = state.currentTournament;
+  if (!tournament) return alert('Torneio não carregado.');
+  const fresh = await getDoc(doc(db, 'tournaments', tournament.id));
+  if (!fresh.exists()) return alert('Torneio não encontrado.');
+  tournament = { id: fresh.id, ...fresh.data() };
+  if (tournament.status !== 'pending') return alert('Torneio já iniciado.');
+
+  const teamIds = tournament.teamIds || [];
+  const n = teamIds.length;
+  if (n < 7 || n > 10) return alert(`Este sistema suporta apenas torneios de 7 a 10 times. Este torneio tem ${n}.`);
+
+  const map = MAPS[n];
+  const seedKeys = seedsEmUso(map);
+  const seeds = {};
+  seedKeys.forEach((k, i) => { seeds[k] = teamIds[i] || null; });
+
+  await updateDoc(doc(db, 'tournaments', tournament.id), {
+    bracketSize: n, seeds, results: {}, status: 'active',
+    startedAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+  });
+  alert('Torneio iniciado!'); openTournamentDetail(tournament.id);
 }
 
 async function saveInlineResultDE(tournamentId, jogoId) {
-  const sA = document.getElementById(`match_${jogoId}_score0`).value;
-  const sB = document.getElementById(`match_${jogoId}_score1`).value;
-  if (sA === '' || sB === '') return alert('Preencha as duas equipas.');
-  const scoreA = parseInt(sA), scoreB = parseInt(sB);
-  if (scoreA === scoreB) return alert('Sem empates na eliminatória.');
-  await executeSaveResult(tournamentId, jogoId, scoreA, scoreB, scoreA > scoreB ? 0 : 1, null);
-}
-
-async function executeSaveResult(tournamentId, jogoId, scoreA, scoreB, winnerIdx, detailsObj) {
-  const t = state.tournaments.find(x => x.id === tournamentId) || state.currentTournament;
-  const results = { ...(t.results || {}) };
-  results[jogoId] = { scoreA, scoreB, winner: winnerIdx };
-  if(detailsObj) results[jogoId].details = detailsObj;
+  const scoreAInput = document.getElementById(`match_${jogoId}_score0`);
+  const scoreBInput = document.getElementById(`match_${jogoId}_score1`);
   
-  t.results = results;
-  const finalGame = matchById(MAPS[t.bracketSize], MAPS[t.bracketSize].winners.flat().find(g => g.label === 'Final').id);
+  if (!scoreAInput || !scoreBInput || scoreAInput.value === '' || scoreBInput.value === '') {
+    return alert('Preencha o placar das duas equipes antes de salvar.');
+  }
+
+  const scoreA = parseInt(scoreAInput.value);
+  const scoreB = parseInt(scoreBInput.value);
+
+  if (scoreA === scoreB) {
+    return alert('Em fases eliminatórias, não pode haver empate. Caso o jogo tenha ido para penáltis, registe o placar final considerando o vencedor.');
+  }
+
+  const winnerIdx = scoreA > scoreB ? 0 : 1;
+
+  const tournament = state.tournaments.find(t => t.id === tournamentId) || state.currentTournament;
+  const results = { ...(tournament.results || {}) };
+  
+  results[jogoId] = { scoreA, scoreB, winner: winnerIdx };
+  tournament.results = results;
+
+  const map = MAPS[tournament.bracketSize];
+  const finalGame = matchById(map, MAPS[tournament.bracketSize].winners.flat().find(g => g.label === 'Final').id);
   const newStatus = results[finalGame.id] !== undefined ? 'finished' : 'active';
-  await updateDoc(doc(db, 'tournaments', tournamentId), { results, status: newStatus, updatedAt: new Date().toISOString() });
-  t.status = newStatus;
-  renderTournamentDetail(t);
+
+  await updateDoc(doc(db, 'tournaments', tournamentId), {
+    results, status: newStatus, updatedAt: new Date().toISOString()
+  });
+  tournament.status = newStatus;
+  renderTournamentDetail(tournament);
 }
 
 async function undoMatchResultDE(tournamentId, jogoId) {
-  if(!confirm('Desfazer resultado?')) return;
-  const t = state.tournaments.find(x => x.id === tournamentId) || state.currentTournament;
-  let results = { ...(t.results || {}) };
+  if(!confirm('Desfazer o resultado deste jogo? (Atenção: se outras partidas já dependerem deste resultado, voltarão ao estado "Aguardando").')) return;
+  
+  const tournament = state.tournaments.find(t => t.id === tournamentId) || state.currentTournament;
+  let results = { ...(tournament.results || {}) };
+  
   delete results[jogoId];
-  t.results = results;
-  await updateDoc(doc(db, 'tournaments', tournamentId), { results, status: 'active', updatedAt: new Date().toISOString() });
-  t.status = 'active'; renderTournamentDetail(t);
+  tournament.results = results;
+
+  await updateDoc(doc(db, 'tournaments', tournamentId), {
+    results, status: 'active', updatedAt: new Date().toISOString()
+  });
+  tournament.status = 'active';
+  renderTournamentDetail(tournament);
 }
 
 // ============================================================
-// SÚMULA ONLINE (NOVO - PAISAGEM / INTELIGENTE)
-// ============================================================
-
-function openSumulaModal(tournamentId, matchId) {
-  const t = state.tournaments.find(x => x.id === tournamentId);
-  if (!t) return;
-  const map = MAPS[t.bracketSize];
-  const match = matchById(map, matchId);
-  const slotA = resolveSlot(map, match.s[0], t.seeds, t.results || {});
-  const slotB = resolveSlot(map, match.s[1], t.seeds, t.results || {});
-  
-  if (!slotA.decided || !slotB.decided) return alert('As equipas ainda não estão definidas para este jogo.');
-
-  const teamA = state.teams.find(x => x.id === slotA.teamId);
-  const teamB = state.teams.find(x => x.id === slotB.teamId);
-
-  // Inicializa Estado da Súmula (Zerada)
-  state.currentSumula = {
-    tournamentId, matchId, modality: t.modality,
-    teamA, teamB,
-    dataA: {}, dataB: {},
-    scoreA: 0, scoreB: 0
-  };
-
-  // Prepara estrutura base para Futsal e Queimada
-  const isQueimada = t.modality === 'queimada';
-  
-  const initAtleta = () => isQueimada ? { burned: false, base: false, yellow: 0, red: 0 } : { goals: 0, yellow: 0, red: 0 };
-  
-  (teamA.athletes || []).forEach(a => state.currentSumula.dataA[a.name] = initAtleta());
-  (teamB.athletes || []).forEach(b => state.currentSumula.dataB[b.name] = initAtleta());
-
-  // Regra Exclusiva da Queimada: Calcula o WO Parcial (Faltantes)
-  if (isQueimada) {
-    const faltantesA = Math.max(0, 12 - (teamA.athletes || []).length);
-    const faltantesB = Math.max(0, 12 - (teamB.athletes || []).length);
-    // Pontos são somados pelo número de baixas do adversário
-    state.currentSumula.scoreA = faltantesB;
-    state.currentSumula.scoreB = faltantesA;
-    state.currentSumula.faltantesA = faltantesA;
-    state.currentSumula.faltantesB = faltantesB;
-  }
-
-  renderSumulaModal();
-}
-
-function calcSumulaScore() {
-  const s = state.currentSumula;
-  let ptsA = 0, ptsB = 0;
-  
-  if (s.modality === 'queimada') {
-    ptsA = s.faltantesB; ptsB = s.faltantesA;
-    Object.values(s.dataB).forEach(v => { if(v.burned) ptsA++; });
-    Object.values(s.dataA).forEach(v => { if(v.burned) ptsB++; });
-  } else {
-    Object.values(s.dataA).forEach(v => { ptsA += v.goals; });
-    Object.values(s.dataB).forEach(v => { ptsB += v.goals; });
-  }
-  s.scoreA = ptsA; s.scoreB = ptsB;
-  
-  const pA = document.getElementById('sumScoreA');
-  const pB = document.getElementById('sumScoreB');
-  if(pA) pA.textContent = ptsA;
-  if(pB) pB.textContent = ptsB;
-}
-
-function updateSum(teamStr, athName, field, increment = true) {
-  const d = state.currentSumula[teamStr][athName];
-  if(typeof d[field] === 'boolean') d[field] = !d[field];
-  else {
-    if(increment) d[field]++;
-    else if(d[field] > 0) d[field]--;
-  }
-  renderSumulaModal(); 
-}
-
-function renderSumulaModal() {
-  const s = state.currentSumula;
-  const isQ = s.modality === 'queimada';
-  calcSumulaScore();
-
-  const buildRows = (team, dataObj, teamStr) => {
-    return (team.athletes || []).sort((x,y) => (x.number||0)-(y.number||0)).map(a => {
-      const d = dataObj[a.name];
-      if (isQ) {
-        return `<tr>
-          <td style="text-align:center; font-weight:bold;">${a.number||'-'}</td>
-          <td style="${d.burned ? 'text-decoration:line-through; color:#aaa;' : ''}">${a.name}</td>
-          <td style="text-align:center;"><button class="action-btn ${d.base?'active-base':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'base')">👑</button></td>
-          <td style="text-align:center;"><button class="action-btn ${d.burned?'active-burn':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'burned')">☠️</button></td>
-          <td style="text-align:center;">
-            <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
-          </td>
-        </tr>`;
-      } else {
-        return `<tr>
-          <td style="text-align:center; font-weight:bold;">${a.number||'-'}</td>
-          <td>${a.name}</td>
-          <td style="text-align:center;">
-            <button class="action-btn" onclick="app.updateSum('${teamStr}', '${a.name}', 'goals', false)">-</button>
-            <span style="display:inline-block; width:20px; font-weight:bold;">${d.goals}</span>
-            <button class="action-btn" style="color:var(--sidebar);" onclick="app.updateSum('${teamStr}', '${a.name}', 'goals', true)">+</button>
-          </td>
-          <td style="text-align:center;">
-            <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
-            <button class="action-btn ${d.red>0?'active-red':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'red')">🟥 ${d.red>0?d.red:''}</button>
-          </td>
-        </tr>`;
-      }
-    }).join('');
-  };
-
-  const html = `
-    <div class="modal-header" style="margin-bottom: 10px;">
-      <h3 style="margin:0;">⚽ Súmula Digital - ${MODALITY_LABELS[s.modality]}</h3>
-      <button class="close-btn" onclick="app.closeModal()">×</button>
-    </div>
-    
-    <div class="sumula-scoreboard">
-      <span id="sumScoreA">${s.scoreA}</span> <span class="vs">X</span> <span id="sumScoreB">${s.scoreB}</span>
-    </div>
-
-    <div class="sumula-container">
-      <div class="sumula-team team-a">
-        <h4>${s.teamA.name}</h4>
-        <div class="sumula-table-wrapper">
-          <table class="sumula-table">
-            <thead>
-              <tr><th style="width:30px;">Nº</th><th>Atleta</th>${isQ ? '<th style="text-align:center; width:50px;">Base</th><th style="text-align:center; width:50px;">Queim.</th><th style="text-align:center; width:50px;">Cartão</th>' : '<th style="text-align:center; width:100px;">Golos</th><th style="text-align:center; width:90px;">Cartões</th>'}</tr>
-            </thead>
-            <tbody>${buildRows(s.teamA, s.dataA, 'dataA')}</tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="sumula-team team-b">
-        <h4>${s.teamB.name}</h4>
-        <div class="sumula-table-wrapper">
-          <table class="sumula-table">
-            <thead>
-              <tr><th style="width:30px;">Nº</th><th>Atleta</th>${isQ ? '<th style="text-align:center; width:50px;">Base</th><th style="text-align:center; width:50px;">Queim.</th><th style="text-align:center; width:50px;">Cartão</th>' : '<th style="text-align:center; width:100px;">Golos</th><th style="text-align:center; width:90px;">Cartões</th>'}</tr>
-            </thead>
-            <tbody>${buildRows(s.teamB, s.dataB, 'dataB')}</tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-    
-    <div class="sumula-footer">
-      <button class="accent" style="font-size: 1.1rem; padding: 12px 30px;" onclick="app.finishSumula()">Salvar Súmula Oficial</button>
-    </div>
-  `;
-
-  openModal(html, true); // Chama isWide = true
-}
-
-async function finishSumula() {
-  const s = state.currentSumula;
-  calcSumulaScore();
-  if (s.scoreA === s.scoreB) return alert('Sem empates. Assinale o golo ou a vantagem de desempate antes de fechar.');
-  
-  const winnerIdx = s.scoreA > s.scoreB ? 0 : 1;
-  const detailsObj = { dataA: s.dataA, dataB: s.dataB };
-  
-  await executeSaveResult(s.tournamentId, s.matchId, s.scoreA, s.scoreB, winnerIdx, detailsObj);
-  closeModal();
-}
-
-// ============================================================
-// MODAL DE PLANTEL SIMPLES (CLIQUE NO NOME)
-// ============================================================
-
-async function openTeamSquadModal(teamId) {
-  if (!teamId) return;
-  const tSnap = await getDoc(doc(db, 'teams', teamId));
-  if (!tSnap.exists()) return;
-  const team = { id: tSnap.id, ...tSnap.data() };
-  state.currentSquadTeam = team;
-  const userSchools = state.currentUser ? (state.currentUser.schoolIds || (state.currentUser.schoolId ? [state.currentUser.schoolId] : [])) : [];
-  const isEditable = state.userRole === 'professor' && userSchools.includes(team.schoolId);
-
-  let html = `<div class="modal-header"><h3 style="display:flex; align-items:center; gap:8px;">📋 Plantel <span style="font-size:1rem; font-weight:normal; color:#666;">(${team.name})</span></h3><button class="close-btn" onclick="app.closeModal()">×</button></div>`;
-  html += `<p class="small mb"><span class="badge ${team.modality}">${MODALITY_LABELS[team.modality]}</span> <span class="badge ${team.category}">${CATEGORY_LABELS[team.category]}</span> <span class="badge ${team.gender}">${GENDER_LABELS[team.gender]}</span></p>`;
-
-  if (isEditable) {
-    html += `<div class="flex mb athlete-inputs mt"><input type="text" id="squadAthleteName" placeholder="Nome do atleta"><input type="number" id="squadAthleteNumber" placeholder="Nº"><button onclick="app.addAthleteToSquad('${team.id}')">Adicionar</button></div>`;
-  } else { html += `<p class="small mb mt" style="color:var(--primary); font-weight:500;">Visualização de Plantel (Apenas leitura)</p>`; }
-
-  html += `<div class="table-responsive mt"><table><thead><tr><th style="width: 50px; text-align:center;">Nº</th><th>Nome do Atleta</th>${isEditable ? '<th style="width: 80px;">Ações</th>' : ''}</tr></thead><tbody id="squadAthletesTable"></tbody></table></div>`;
-  openModal(html, false);
-  renderSquadTable(team, isEditable);
-}
-
-function renderSquadTable(team, isEditable) {
-  const tbody = document.getElementById('squadAthletesTable');
-  if (!tbody) return;
-  const athletes = team.athletes || [];
-  if (athletes.length === 0) { tbody.innerHTML = `<tr><td colspan="${isEditable ? 3 : 2}" class="empty">Nenhum atleta.</td></tr>`; return; }
-  tbody.innerHTML = athletes.map((a, i) => ({ ...a, _idx: i })).sort((x, y) => (x.number || 0) - (y.number || 0)).map(a => `<tr><td style="text-align:center; font-weight:bold;">${a.number ?? '-'}</td><td>${a.name}</td>${isEditable ? `<td><button class="danger small-btn" style="padding:4px 8px; margin:0;" onclick="app.removeAthleteFromSquad('${team.id}', ${a._idx})">Excluir</button></td>` : ''}</tr>`).join('');
-}
-async function addAthleteToSquad(teamId) {
-  const name = document.getElementById('squadAthleteName').value.trim(); const number = document.getElementById('squadAthleteNumber').value;
-  if (!name) return alert('Informe o nome.');
-  const team = state.currentSquadTeam; if (!team || team.id !== teamId) return;
-  const athletes = team.athletes ? [...team.athletes] : []; athletes.push({ name, number: number ? parseInt(number) : null });
-  await updateDoc(doc(db, 'teams', teamId), { athletes }); team.athletes = athletes;
-  document.getElementById('squadAthleteName').value = ''; document.getElementById('squadAthleteNumber').value = ''; renderSquadTable(team, true);
-}
-async function removeAthleteFromSquad(teamId, idx) {
-  if (!confirm('Remover?')) return;
-  const team = state.currentSquadTeam; if (!team || team.id !== teamId) return;
-  const athletes = (team.athletes || []).filter((_, i) => i !== idx);
-  await updateDoc(doc(db, 'teams', teamId), { athletes }); team.athletes = athletes; renderSquadTable(team, true);
-}
-
-// ============================================================
-// CLASSIFICAÇÕES
+// LÓGICA DE CLASSIFICAÇÃO (POR TORNEIO)
 // ============================================================
 function calculateStandings(tournament) {
   if (tournament.status !== 'finished') return [];
-  const map = MAPS[tournament.bracketSize]; const results = tournament.results || {}; const seeds = tournament.seeds || {};
-  const getLoser = (matchId) => { const res = results[matchId]; if (!res) return null; const m = matchById(map, matchId); const a = resolveSlot(map, m.s[0], seeds, results); const b = resolveSlot(map, m.s[1], seeds, results); const wIdx = typeof res === 'object' ? res.winner : res; return wIdx === 0 ? b.teamId : a.teamId; };
-  const getWinner = (matchId) => { const res = results[matchId]; if (!res) return null; const m = matchById(map, matchId); const a = resolveSlot(map, m.s[0], seeds, results); const b = resolveSlot(map, m.s[1], seeds, results); const wIdx = typeof res === 'object' ? res.winner : res; return wIdx === 0 ? a.teamId : b.teamId; };
+  const size = tournament.bracketSize;
+  const map = MAPS[size];
+  const results = tournament.results || {};
+  const seeds = tournament.seeds || {};
+
+  const getLoser = (matchId) => {
+    const res = results[matchId];
+    if (!res) return null;
+    const m = matchById(map, matchId);
+    const a = resolveSlot(map, m.s[0], seeds, results);
+    const b = resolveSlot(map, m.s[1], seeds, results);
+    const wIdx = typeof res === 'object' ? res.winner : res;
+    return wIdx === 0 ? b.teamId : a.teamId;
+  };
+
+  const getWinner = (matchId) => {
+    const res = results[matchId];
+    if (!res) return null;
+    const m = matchById(map, matchId);
+    const a = resolveSlot(map, m.s[0], seeds, results);
+    const b = resolveSlot(map, m.s[1], seeds, results);
+    const wIdx = typeof res === 'object' ? res.winner : res;
+    return wIdx === 0 ? a.teamId : b.teamId;
+  };
+
   const standings = [];
+  
   const finalGameMatch = map.winners.flat().find(g => g.label === 'Final');
-  if (finalGameMatch) { const championId = getWinner(finalGameMatch.id); const runnerUpId = getLoser(finalGameMatch.id); if (championId) standings.push({ pos: '1º Lugar', teamId: championId }); if (runnerUpId) standings.push({ pos: '2º Lugar', teamId: runnerUpId }); }
-  const losersCols = map.losers; const numCols = losersCols.length;
-  if (numCols >= 1) losersCols[numCols - 1].forEach(m => { const id = getLoser(m.id); if (id) standings.push({ pos: '3º Lugar', teamId: id }); });
-  if (numCols >= 2) losersCols[numCols - 2].forEach(m => { const id = getLoser(m.id); if (id) standings.push({ pos: '4º Lugar', teamId: id }); });
-  if (numCols >= 3) { const col = losersCols[numCols - 3]; const losers = []; col.forEach(m => { const id = getLoser(m.id); if (id) losers.push(id); }); const label = losers.length === 1 ? '5º Lugar' : '5º - 6º Lugar'; losers.forEach(id => standings.push({ pos: label, teamId: id })); }
-  if (numCols >= 4) { const col = losersCols[numCols - 4]; const losers = []; col.forEach(m => { const id = getLoser(m.id); if (id) losers.push(id); }); const label = losers.length === 1 ? '7º Lugar' : '7º - 8º Lugar'; losers.forEach(id => standings.push({ pos: label, teamId: id })); }
-  if (numCols >= 5) { const col = losersCols[numCols - 5]; const losers = []; col.forEach(m => { const id = getLoser(m.id); if (id) losers.push(id); }); const label = losers.length === 1 ? '9º Lugar' : '9º - 10º Lugar'; losers.forEach(id => standings.push({ pos: label, teamId: id })); }
+  if (finalGameMatch) {
+    const championId = getWinner(finalGameMatch.id);
+    const runnerUpId = getLoser(finalGameMatch.id);
+    if (championId) standings.push({ pos: '1º Lugar', teamId: championId });
+    if (runnerUpId) standings.push({ pos: '2º Lugar', teamId: runnerUpId });
+  }
+
+  const losersCols = map.losers;
+  const numCols = losersCols.length;
+
+  if (numCols >= 1) {
+    losersCols[numCols - 1].forEach(m => {
+      const loserId = getLoser(m.id);
+      if (loserId) standings.push({ pos: '3º Lugar', teamId: loserId });
+    });
+  }
+
+  if (numCols >= 2) {
+    losersCols[numCols - 2].forEach(m => {
+      const loserId = getLoser(m.id);
+      if (loserId) standings.push({ pos: '4º Lugar', teamId: loserId });
+    });
+  }
+
+  if (numCols >= 3) {
+    const col = losersCols[numCols - 3];
+    const losers = [];
+    col.forEach(m => { const id = getLoser(m.id); if (id) losers.push(id); });
+    const label = losers.length === 1 ? '5º Lugar' : '5º - 6º Lugar';
+    losers.forEach(id => standings.push({ pos: label, teamId: id }));
+  }
+
+  if (numCols >= 4) {
+    const col = losersCols[numCols - 4];
+    const losers = [];
+    col.forEach(m => { const id = getLoser(m.id); if (id) losers.push(id); });
+    const label = losers.length === 1 ? '7º Lugar' : '7º - 8º Lugar';
+    losers.forEach(id => standings.push({ pos: label, teamId: id }));
+  }
+
+  if (numCols >= 5) {
+    const col = losersCols[numCols - 5];
+    const losers = [];
+    col.forEach(m => { const id = getLoser(m.id); if (id) losers.push(id); });
+    const label = losers.length === 1 ? '9º Lugar' : '9º - 10º Lugar';
+    losers.forEach(id => standings.push({ pos: label, teamId: id }));
+  }
+
   return standings;
 }
 
 function renderStandings(tournament, containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  if (tournament.status !== 'finished') { container.innerHTML = ''; container.classList.add('hidden'); return; }
+  
+  if (tournament.status !== 'finished') {
+    container.innerHTML = '';
+    container.classList.add('hidden');
+    return;
+  }
+
   const standings = calculateStandings(tournament);
   if (!standings || standings.length === 0) return;
+
   let html = '<div class="standings-box"><h4 class="mb" style="color: var(--sidebar);">🏆 Classificação Final</h4><div class="standings-list">';
+  
   standings.forEach(item => {
-    let medal = '', extraClass = '';
-    if (item.pos === '1º Lugar') { medal = '🥇'; extraClass = 'first-place'; } else if (item.pos === '2º Lugar') { medal = '🥈'; extraClass = 'second-place'; } else if (item.pos === '3º Lugar') { medal = '🥉'; extraClass = 'third-place'; } else { medal = '🏅'; extraClass = 'other-place'; }
-    html += `<div class="standing-item ${extraClass}"><div class="standing-pos">${medal} ${item.pos}</div><div class="standing-team">${teamNameClickable(item.teamId)}</div></div>`;
+    let medal = '';
+    let extraClass = '';
+    if (item.pos === '1º Lugar') { medal = '🥇'; extraClass = 'first-place'; }
+    else if (item.pos === '2º Lugar') { medal = '🥈'; extraClass = 'second-place'; }
+    else if (item.pos === '3º Lugar') { medal = '🥉'; extraClass = 'third-place'; }
+    else { medal = '🏅'; extraClass = 'other-place'; }
+
+    html += `
+      <div class="standing-item ${extraClass}">
+        <div class="standing-pos">${medal} ${item.pos}</div>
+        <div class="standing-team">${teamNameClickable(item.teamId)}</div>
+      </div>
+    `;
   });
-  html += '</div></div>'; container.innerHTML = html; container.classList.remove('hidden');
+  
+  html += '</div></div>';
+  container.innerHTML = html;
+  container.classList.remove('hidden');
 }
 
+// ============================================================
+// CLASSIFICAÇÃO GERAL DAS ESCOLAS
+// ============================================================
 function renderGeneralStandings() {
-  const tbody = document.getElementById('generalStandingsTable'); if (!tbody) return;
+  const tbody = document.getElementById('generalStandingsTable');
+  if (!tbody) return;
+
   const schoolStats = {};
-  state.schools.forEach(s => { schoolStats[s.id] = { id: s.id, name: s.name, points: 0, places: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 } }; });
+  
+  state.schools.forEach(s => {
+    schoolStats[s.id] = {
+      id: s.id, name: s.name, points: 0,
+      places: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+    };
+  });
+
   state.tournaments.filter(t => t.status === 'finished').forEach(tournament => {
     const standings = calculateStandings(tournament);
+    
     standings.forEach(item => {
-      const team = state.teams.find(x => x.id === item.teamId); if (!team) return;
-      const schoolId = team.schoolId; if (!schoolStats[schoolId]) return;
+      const team = state.teams.find(x => x.id === item.teamId);
+      if (!team) return;
+      const schoolId = team.schoolId;
+      if (!schoolStats[schoolId]) return;
+
       let posNum = parseInt(item.pos); 
-      if (posNum === 1) schoolStats[schoolId].points += 10; else if (posNum === 2) schoolStats[schoolId].points += 7; else if (posNum === 3) schoolStats[schoolId].points += 4; else if (posNum === 4) schoolStats[schoolId].points += 2; else if (posNum >= 5 && posNum <= 9) schoolStats[schoolId].points += 1;
-      if (posNum >= 1 && posNum <= 6) schoolStats[schoolId].places[posNum] += 1;
+      
+      if (posNum === 1) schoolStats[schoolId].points += 10;
+      else if (posNum === 2) schoolStats[schoolId].points += 7;
+      else if (posNum === 3) schoolStats[schoolId].points += 4;
+      else if (posNum === 4) schoolStats[schoolId].points += 2;
+      else if (posNum >= 5 && posNum <= 9) schoolStats[schoolId].points += 1;
+      
+      if (posNum >= 1 && posNum <= 6) {
+        schoolStats[schoolId].places[posNum] += 1;
+      }
     });
   });
+
   const sortedSchools = Object.values(schoolStats).sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;             
     if (b.places[1] !== a.places[1]) return b.places[1] - a.places[1]; 
@@ -794,65 +1032,181 @@ function renderGeneralStandings() {
     if (b.places[6] !== a.places[6]) return b.places[6] - a.places[6]; 
     return a.name.localeCompare(b.name); 
   });
-  if (sortedSchools.length === 0) { tbody.innerHTML = '<tr><td colspan=\"4\" class=\"empty\">Nenhuma escola cadastrada ou torneios finalizados.</td></tr>'; return; }
+
+  if (sortedSchools.length === 0) {
+    tbody.innerHTML = '<tr><td colspan=\"4\" class=\"empty\">Nenhuma escola cadastrada ou torneios finalizados.</td></tr>';
+    return;
+  }
+
   tbody.innerHTML = sortedSchools.map((s, index) => {
-    let medal = '', extraStyle = '';
-    if (index === 0 && s.points > 0) { medal = '🏆 '; extraStyle = 'font-size:1.1rem; color:var(--primary);'; } else if (index === 1 && s.points > 0) medal = '🥈 '; else if (index === 2 && s.points > 0) medal = '🥉 ';
-    return `<tr><td style=\"font-weight:bold; text-align:center; ${extraStyle}\">${index + 1}º</td><td style=\"${extraStyle}\">${medal}${s.name}</td><td style=\"font-weight:900; color:var(--primary); text-align:center; font-size:1.1rem;\">${s.points} pts</td><td class=\"small\" style=\"text-align:center; color:#666;\">${s.places[1]} 🥇 | ${s.places[2]} 🥈 | ${s.places[3]} 🥉</td></tr>`;
+    let medal = '';
+    let extraStyle = '';
+    if (index === 0 && s.points > 0) { medal = '🏆 '; extraStyle = 'font-size:1.1rem; color:var(--primary);'; }
+    else if (index === 1 && s.points > 0) { medal = '🥈 '; }
+    else if (index === 2 && s.points > 0) { medal = '🥉 '; }
+    
+    return `<tr>
+      <td style=\"font-weight:bold; text-align:center; ${extraStyle}\">${index + 1}º</td>
+      <td style=\"${extraStyle}\">${medal}${s.name}</td>
+      <td style=\"font-weight:900; color:var(--primary); text-align:center; font-size:1.1rem;\">${s.points} pts</td>
+      <td class=\"small\" style=\"text-align:center; color:#666;\">
+        ${s.places[1]} 🥇 | ${s.places[2]} 🥈 | ${s.places[3]} 🥉
+      </td>
+    </tr>`;
   }).join('');
 }
 
+
+// ============================================================
+// ÁREA DO PROFESSOR (Gestão Geral e Histórico)
+// ============================================================
+
+// ----------------------------------------------------
+// ATUALIZADO: BUSCA DE TIMES POR MÚLTIPLAS ESCOLAS
+// ----------------------------------------------------
 async function loadProfTeams() {
   const userSchools = state.currentUser ? (state.currentUser.schoolIds || (state.currentUser.schoolId ? [state.currentUser.schoolId] : [])) : [];
-  if (userSchools.length === 0) { state.profTeams = []; renderProfTeams(); return; }
+  
+  if (userSchools.length === 0) {
+    state.profTeams = [];
+    renderProfTeams();
+    return;
+  }
+
   if (state.teams.length === 0) await loadTeams();
-  state.profTeams = state.teams.filter(t => userSchools.includes(t.schoolId)); renderProfTeams();
+  
+  // Filtra localmente todas as equipes onde o ID da escola bate com a lista do professor
+  state.profTeams = state.teams.filter(t => userSchools.includes(t.schoolId));
+  renderProfTeams();
 }
+
 function renderProfTeams() {
-  const container = document.getElementById('profTeamsList'); const teams = state.profTeams || [];
+  const container = document.getElementById('profTeamsList');
+  const teams = state.profTeams || [];
   if (teams.length === 0) { container.innerHTML = '<div class="empty">Nenhuma equipa para a sua escola.</div>'; return; }
-  container.innerHTML = teams.map(t => `<div class="card" style="cursor:pointer;" onclick="app.openAthletes('${t.id}')"><h4>${t.name}</h4><p class="small"><span class="badge ${t.modality}">${MODALITY_LABELS[t.modality]}</span> <span class="badge ${t.category}">${CATEGORY_LABELS[t.category]}</span> <span class="badge ${t.gender}">${GENDER_LABELS[t.gender]}</span> · ${(t.athletes || []).length} atletas</p></div>`).join('');
+  container.innerHTML = teams.map(t => `
+    <div class="card" style="cursor:pointer;" onclick="app.openAthletes('${t.id}')">
+      <h4>${t.name}</h4>
+      <p class="small">
+        <span class="badge ${t.modality}">${MODALITY_LABELS[t.modality]}</span>
+        <span class="badge ${t.category}">${CATEGORY_LABELS[t.category]}</span>
+        <span class="badge ${t.gender}">${GENDER_LABELS[t.gender]}</span>
+        · ${(t.athletes || []).length} atletas
+      </p>
+    </div>`).join('');
 }
+
 function openAthletes(teamId) {
-  const team = state.profTeams.find(t => t.id === teamId); if (!team) return; state.currentTeam = team;
-  document.getElementById('athTeamName').textContent = team.name; document.getElementById('athTeamInfo').innerHTML = `<span class="badge ${team.modality}">${MODALITY_LABELS[team.modality]}</span> <span class="badge ${team.category}">${CATEGORY_LABELS[team.category]}</span> <span class="badge ${team.gender}">${GENDER_LABELS[team.gender]}</span>`;
-  renderAthletes(); show('profAthletes');
+  const team = state.profTeams.find(t => t.id === teamId);
+  if (!team) return;
+  state.currentTeam = team;
+  document.getElementById('athTeamName').textContent = team.name;
+  document.getElementById('athTeamInfo').innerHTML = `
+    <span class="badge ${team.modality}">${MODALITY_LABELS[team.modality]}</span>
+    <span class="badge ${team.category}">${CATEGORY_LABELS[team.category]}</span>
+    <span class="badge ${team.gender}">${GENDER_LABELS[team.gender]}</span>`;
+  renderAthletes();
+  show('profAthletes');
 }
+
 function renderAthletes() {
-  const team = state.currentTeam; const tbody = document.getElementById('athletesTable'); const athletes = (team && team.athletes) ? team.athletes : [];
+  const team = state.currentTeam;
+  const tbody = document.getElementById('athletesTable');
+  const athletes = (team && team.athletes) ? team.athletes : [];
   if (athletes.length === 0) { tbody.innerHTML = '<tr><td colspan="3" class="empty">Nenhum atleta registado.</td></tr>'; return; }
-  tbody.innerHTML = athletes.map((a, i) => ({ ...a, _idx: i })).sort((x, y) => (x.number || 0) - (y.number || 0)).map(a => `<tr><td>${a.number ?? '-'}</td><td>${a.name}</td><td><button class="danger" onclick="app.removeAthlete(${a._idx})">Excluir</button></td></tr>`).join('');
+  tbody.innerHTML = athletes
+    .map((a, i) => ({ ...a, _idx: i }))
+    .sort((x, y) => (x.number || 0) - (y.number || 0))
+    .map(a => `
+      <tr>
+        <td>${a.number ?? '-'}</td>
+        <td>${a.name}</td>
+        <td><button class="danger" onclick="app.removeAthlete(${a._idx})">Excluir</button></td>
+      </tr>`).join('');
 }
+
 async function addAthlete() {
-  const name = document.getElementById('athleteName').value.trim(); const number = document.getElementById('athleteNumber').value;
-  if (!name) return alert('Informe o nome do atleta.'); const team = state.currentTeam; if (!team) return;
-  const athletes = team.athletes ? [...team.athletes] : []; athletes.push({ name, number: number ? parseInt(number) : null });
-  await updateDoc(doc(db, 'teams', team.id), { athletes }); team.athletes = athletes; document.getElementById('athleteName').value = ''; document.getElementById('athleteNumber').value = ''; renderAthletes();
+  const name = document.getElementById('athleteName').value.trim();
+  const number = document.getElementById('athleteNumber').value;
+  if (!name) return alert('Informe o nome do atleta.');
+  const team = state.currentTeam;
+  if (!team) return;
+  const athletes = team.athletes ? [...team.athletes] : [];
+  athletes.push({ name, number: number ? parseInt(number) : null });
+  await updateDoc(doc(db, 'teams', team.id), { athletes });
+  team.athletes = athletes;
+  document.getElementById('athleteName').value = '';
+  document.getElementById('athleteNumber').value = '';
+  renderAthletes();
 }
+
 async function removeAthlete(idx) {
-  const team = state.currentTeam; if (!team) return; if (!confirm('Remover este atleta?')) return;
+  const team = state.currentTeam;
+  if (!team) return;
+  if (!confirm('Remover este atleta?')) return;
   const athletes = (team.athletes || []).filter((_, i) => i !== idx);
-  await updateDoc(doc(db, 'teams', team.id), { athletes }); team.athletes = athletes; renderAthletes();
+  await updateDoc(doc(db, 'teams', team.id), { athletes });
+  team.athletes = athletes;
+  renderAthletes();
 }
 
 async function loadProfTournaments() {
-  const snap = await getDocs(collection(db, 'tournaments')); const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  if (state.teams.length === 0) await loadTeams(); state.profTournaments = all; renderProfTournaments();
-}
-function renderProfTournaments() {
-  const container = document.getElementById('profTournamentsList'); const list = state.profTournaments || [];
-  if (list.length === 0) { container.innerHTML = '<div class="empty">Nenhum torneio disponível.</div>'; return; }
-  container.innerHTML = list.map(t => `<div class="card tournament-list-card" style="cursor:pointer;" onclick="app.openProfTournamentDetail('${t.id}')"><h4><span class="badge ${t.modality}">${MODALITY_LABELS[t.modality]}</span> ${t.name}</h4><p class="small">${(t.teamIds || []).length} equipas · <span class="badge" style="text-transform:capitalize; background:#fff3e0; color:#e65100;">${tStatusLabel(t.status)}</span></p></div>`).join('');
-}
-async function openProfTournamentDetail(id) {
-  const snap = await getDoc(doc(db, 'tournaments', id)); if (!snap.exists()) return; const tournament = { id: snap.id, ...snap.data() }; state.currentTournament = tournament;
+  const snap = await getDocs(collection(db, 'tournaments'));
+  const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   if (state.teams.length === 0) await loadTeams();
-  document.getElementById('ptdName').textContent = tournament.name; document.getElementById('ptdInfo').innerHTML = `<span class="badge ${tournament.modality}">${MODALITY_LABELS[tournament.modality]}</span> <span class="badge ${tournament.category}">${CATEGORY_LABELS[tournament.category]}</span> <span class="badge ${tournament.gender}">${GENDER_LABELS[tournament.gender]}</span> <span class="badge" style="text-transform:capitalize; margin-left:6px;">${tStatusLabel(tournament.status)}</span>`;
-  renderStandings(tournament, 'ptdStandings'); renderBracketDE(tournament, 'ptdBracket', true); show('profTournament-detail');
+  state.profTournaments = all;
+  renderProfTournaments();
 }
 
+function renderProfTournaments() {
+  const container = document.getElementById('profTournamentsList');
+  const list = state.profTournaments || [];
+  if (list.length === 0) { container.innerHTML = '<div class="empty">Nenhum torneio disponível.</div>'; return; }
+  container.innerHTML = list.map(t => `
+    <div class="card tournament-list-card" style="cursor:pointer;" onclick="app.openProfTournamentDetail('${t.id}')">
+      <h4><span class="badge ${t.modality}">${MODALITY_LABELS[t.modality]}</span> ${t.name}</h4>
+      <p class="small">${(t.teamIds || []).length} equipes · <span class="badge" style="text-transform:capitalize; background:#fff3e0; color:#e65100;">${statusToLabel(t.status)}</span></p>
+    </div>`).join('');
+}
+
+async function openProfTournamentDetail(id) {
+  const snap = await getDoc(doc(db, 'tournaments', id));
+  if (!snap.exists()) return;
+  const tournament = { id: snap.id, ...snap.data() };
+  state.currentTournament = tournament;
+  if (state.teams.length === 0) await loadTeams();
+  document.getElementById('ptdName').textContent = tournament.name;
+  document.getElementById('ptdInfo').innerHTML = `
+    <span class="badge ${tournament.modality}">${MODALITY_LABELS[tournament.modality]}</span>
+    <span class="badge ${tournament.category}">${CATEGORY_LABELS[tournament.category]}</span>
+    <span class="badge ${tournament.gender}">${GENDER_LABELS[tournament.gender]}</span>
+    <span class="badge" style="text-transform:capitalize; margin-left:6px;">${statusToLabel(tournament.status)}</span>`;
+  
+  renderStandings(tournament, 'ptdStandings');
+  renderBracketDE(tournament, 'ptdBracket', true);
+  show('profTournament-detail');
+}
+
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.querySelector('.sidebar-overlay');
+  if (sidebar) sidebar.classList.toggle('active');
+  if (overlay) overlay.classList.toggle('active');
+}
+
+// Exportações Globais
 window.app = {
-  login, logout, show, openSchoolModal, saveSchool, deleteSchool, openProfessorModal, saveProfessor, deleteProfessor, toggleSelectAllSchools, createBatchTeams, openTournamentDetail, openEditTournamentModal, saveTournamentName, openManageTeamsModal, saveTournamentTeams, deleteTournament, shuffleTournamentTeams, startTournament,
-  saveInlineResultDE, undoMatchResultDE, openTeamSquadModal, addAthleteToSquad, removeAthleteFromSquad, closeModal, openAthletes, addAthlete, removeAthlete, loadProfTournaments, openProfTournamentDetail, toggleSidebar, renderGeneralStandings,
-  openSumulaModal, updateSum, finishSumula
+  login, logout, show,
+  openSchoolModal, saveSchool, deleteSchool,
+  openProfessorModal, saveProfessor, deleteProfessor,
+  toggleSelectAllSchools, createBatchTeams,
+  openTournamentDetail, openEditTournamentModal, saveTournamentName,
+  openManageTeamsModal, saveTournamentTeams, deleteTournament,
+  shuffleTournamentTeams, startTournament,
+  saveInlineResultDE, undoMatchResultDE,
+  openTeamSquadModal, addAthleteToSquad, removeAthleteFromSquad, 
+  closeModal,
+  openAthletes, addAthlete, removeAthlete,
+  loadProfTournaments, openProfTournamentDetail, toggleSidebar,
+  renderGeneralStandings
 };
