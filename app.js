@@ -31,6 +31,31 @@ const CATEGORY_LABELS = { sub09: 'Sub-09', sub11: 'Sub-11' };
 const GENDER_LABELS = { masculino: 'Masculino', feminino: 'Feminino' };
 
 /* ============================================================
+   ÁUDIO SINTETIZADO (Alertas Sonoros sem Ficheiros Externos)
+   ============================================================ */
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+function playBeep(freq = 440, duration = 200, type = 'sine') {
+  if(!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type; osc.frequency.value = freq;
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start();
+  gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration/1000);
+  osc.stop(audioCtx.currentTime + duration/1000);
+}
+function playOneMinuteWarning() {
+  playBeep(880, 200); setTimeout(() => playBeep(880, 200), 300);
+}
+function playEndWarning() {
+  playBeep(600, 1500, 'square'); // Apito longo e chamativo
+}
+
+/* ============================================================
    MAPAS FIXOS DE DUPLA ELIMINAÇÃO (7 a 10 times)
    ============================================================ */
 const SEEDS = ['A','B','C','D','E','F','G','H','I','J'];
@@ -38,38 +63,28 @@ const SEEDS = ['A','B','C','D','E','F','G','H','I','J'];
 const MAPS = {
   7:{
     winners:[
-      [ {id:1,label:'Jogo 1',s:[{seed:'C'},{seed:'I'}]},
-        {id:2,label:'Jogo 2',s:[{seed:'F'},{seed:'B'}]},
-        {id:3,label:'Jogo 3',s:[{seed:'H'},{seed:'E'}]} ],
-      [ {id:5,label:'Jogo 5',s:[{seed:'A'},{win:1}]},
-        {id:6,label:'Jogo 6',s:[{win:2},{win:3}]} ],
+      [ {id:1,label:'Jogo 1',s:[{seed:'C'},{seed:'I'}]}, {id:2,label:'Jogo 2',s:[{seed:'F'},{seed:'B'}]}, {id:3,label:'Jogo 3',s:[{seed:'H'},{seed:'E'}]} ],
+      [ {id:5,label:'Jogo 5',s:[{seed:'A'},{win:1}]}, {id:6,label:'Jogo 6',s:[{win:2},{win:3}]} ],
       [ {id:10,label:'Semifinal',s:[{win:5},{win:6}]} ],
       [ {id:12,label:'Final',s:[{win:10},{win:11}]} ],
     ],
     losers:[
       [ {id:4,label:'Jogo 4',s:[{lose:2},{lose:3}]} ],
-      [ {id:7,label:'Jogo 7',s:[{lose:6},{lose:1}]},
-        {id:8,label:'Jogo 8',s:[{lose:5},{win:4}]} ],
+      [ {id:7,label:'Jogo 7',s:[{lose:6},{lose:1}]}, {id:8,label:'Jogo 8',s:[{lose:5},{win:4}]} ],
       [ {id:9,label:'Jogo 9',s:[{win:7},{win:8}]} ],
       [ {id:11,label:'Final perd.',s:[{lose:10},{win:9}]} ],
     ]
   },
   8:{
     winners:[
-      [ {id:1,label:'Jogo 1',s:[{seed:'A'},{seed:'H'}]},
-        {id:2,label:'Jogo 2',s:[{seed:'D'},{seed:'E'}]},
-        {id:3,label:'Jogo 3',s:[{seed:'C'},{seed:'F'}]},
-        {id:4,label:'Jogo 4',s:[{seed:'B'},{seed:'G'}]} ],
-      [ {id:7,label:'Jogo 7',s:[{win:1},{win:2}]},
-        {id:8,label:'Jogo 8',s:[{win:3},{win:4}]} ],
+      [ {id:1,label:'Jogo 1',s:[{seed:'A'},{seed:'H'}]}, {id:2,label:'Jogo 2',s:[{seed:'D'},{seed:'E'}]}, {id:3,label:'Jogo 3',s:[{seed:'C'},{seed:'F'}]}, {id:4,label:'Jogo 4',s:[{seed:'B'},{seed:'G'}]} ],
+      [ {id:7,label:'Jogo 7',s:[{win:1},{win:2}]}, {id:8,label:'Jogo 8',s:[{win:3},{win:4}]} ],
       [ {id:12,label:'Semifinal',s:[{win:7},{win:8}]} ],
       [ {id:14,label:'Final',s:[{win:12},{win:13}]} ],
     ],
     losers:[
-      [ {id:5,label:'Jogo 5',s:[{lose:1},{lose:2}]},
-        {id:6,label:'Jogo 6',s:[{lose:3},{lose:4}]} ],
-      [ {id:10,label:'Jogo 10',s:[{lose:8},{win:5}]},
-        {id:9,label:'Jogo 9',s:[{lose:7},{win:6}]} ],
+      [ {id:5,label:'Jogo 5',s:[{lose:1},{lose:2}]}, {id:6,label:'Jogo 6',s:[{lose:3},{lose:4}]} ],
+      [ {id:10,label:'Jogo 10',s:[{lose:8},{win:5}]}, {id:9,label:'Jogo 9',s:[{lose:7},{win:6}]} ],
       [ {id:11,label:'Jogo 11',s:[{win:10},{win:9}]} ],
       [ {id:13,label:'Final perd.',s:[{lose:12},{win:11}]} ],
     ]
@@ -77,45 +92,31 @@ const MAPS = {
   9:{
     winners:[
       [ {id:1,label:'Jogo 1',s:[{seed:'B'},{seed:'G'}]} ],
-      [ {id:5,label:'Jogo 5',s:[{seed:'D'},{win:1}]},
-        {id:2,label:'Jogo 2',s:[{seed:'H'},{seed:'C'}]},
-        {id:3,label:'Jogo 3',s:[{seed:'A'},{seed:'E'}]},
-        {id:4,label:'Jogo 4',s:[{seed:'F'},{seed:'I'}]} ],
-      [ {id:10,label:'Jogo 10',s:[{win:5},{win:2}]},
-        {id:9,label:'Jogo 9',s:[{win:3},{win:4}]} ],
+      [ {id:5,label:'Jogo 5',s:[{seed:'D'},{win:1}]}, {id:2,label:'Jogo 2',s:[{seed:'H'},{seed:'C'}]}, {id:3,label:'Jogo 3',s:[{seed:'A'},{seed:'E'}]}, {id:4,label:'Jogo 4',s:[{seed:'F'},{seed:'I'}]} ],
+      [ {id:10,label:'Jogo 10',s:[{win:5},{win:2}]}, {id:9,label:'Jogo 9',s:[{win:3},{win:4}]} ],
       [ {id:14,label:'Semifinal',s:[{win:10},{win:9}]} ],
       [ {id:16,label:'Final',s:[{win:14},{win:15}]} ],
     ],
     losers:[
       [ {id:6,label:'Jogo 6',s:[{lose:4},{lose:1}]} ],
-      [ {id:8,label:'Jogo 8',s:[{lose:3},{win:6}]},
-        {id:7,label:'Jogo 7',s:[{lose:2},{lose:5}]} ],
-      [ {id:12,label:'Jogo 12',s:[{lose:10},{win:8}]},
-        {id:11,label:'Jogo 11',s:[{lose:9},{win:7}]} ],
+      [ {id:8,label:'Jogo 8',s:[{lose:3},{win:6}]}, {id:7,label:'Jogo 7',s:[{lose:2},{lose:5}]} ],
+      [ {id:12,label:'Jogo 12',s:[{lose:10},{win:8}]}, {id:11,label:'Jogo 11',s:[{lose:9},{win:7}]} ],
       [ {id:13,label:'Jogo 13',s:[{win:12},{win:11}]} ],
       [ {id:15,label:'Final perd.',s:[{lose:14},{win:13}]} ],
     ]
   },
   10:{
     winners:[
-      [ {id:1,label:'Jogo 1',s:[{seed:'B'},{seed:'G'}]},
-        {id:2,label:'Jogo 2',s:[{seed:'E'},{seed:'J'}]} ],
-      [ {id:3,label:'Jogo 3',s:[{seed:'A'},{win:1}]},
-        {id:4,label:'Jogo 4',s:[{seed:'D'},{seed:'I'}]},
-        {id:5,label:'Jogo 5',s:[{seed:'C'},{seed:'H'}]},
-        {id:6,label:'Jogo 6',s:[{seed:'F'},{win:2}]} ],
-      [ {id:11,label:'Jogo 11',s:[{win:3},{win:4}]},
-        {id:12,label:'Jogo 12',s:[{win:5},{win:6}]} ],
+      [ {id:1,label:'Jogo 1',s:[{seed:'B'},{seed:'G'}]}, {id:2,label:'Jogo 2',s:[{seed:'E'},{seed:'J'}]} ],
+      [ {id:3,label:'Jogo 3',s:[{seed:'A'},{win:1}]}, {id:4,label:'Jogo 4',s:[{seed:'D'},{seed:'I'}]}, {id:5,label:'Jogo 5',s:[{seed:'C'},{seed:'H'}]}, {id:6,label:'Jogo 6',s:[{seed:'F'},{win:2}]} ],
+      [ {id:11,label:'Jogo 11',s:[{win:3},{win:4}]}, {id:12,label:'Jogo 12',s:[{win:5},{win:6}]} ],
       [ {id:16,label:'Semifinal',s:[{win:11},{win:12}]} ],
       [ {id:18,label:'Final',s:[{win:16},{win:17}]} ],
     ],
     losers:[
-      [ {id:8,label:'Jogo 8',s:[{lose:4},{lose:1}]},
-        {id:7,label:'Jogo 7',s:[{lose:3},{lose:2}]} ],
-      [ {id:10,label:'Jogo 10',s:[{lose:6},{win:8}]},
-        {id:9,label:'Jogo 9',s:[{lose:5},{win:7}]} ],
-      [ {id:13,label:'Jogo 13',s:[{lose:11},{win:10}]},
-        {id:14,label:'Jogo 14',s:[{lose:12},{win:9}]} ],
+      [ {id:8,label:'Jogo 8',s:[{lose:4},{lose:1}]}, {id:7,label:'Jogo 7',s:[{lose:3},{lose:2}]} ],
+      [ {id:10,label:'Jogo 10',s:[{lose:6},{win:8}]}, {id:9,label:'Jogo 9',s:[{lose:5},{win:7}]} ],
+      [ {id:13,label:'Jogo 13',s:[{lose:11},{win:10}]}, {id:14,label:'Jogo 14',s:[{lose:12},{win:9}]} ],
       [ {id:15,label:'Jogo 15',s:[{win:13},{win:14}]} ],
       [ {id:17,label:'Final perd.',s:[{lose:16},{win:15}]} ],
     ]
@@ -209,9 +210,6 @@ function renderSchoolsTable() {
       <button class="danger" onclick="app.deleteSchool('${s.id}')">Excluir</button></td></tr>`).join('');
 }
 
-// ----------------------------------------------------
-// SISTEMA DE MODAL
-// ----------------------------------------------------
 function openModal(html, isWide = false) {
   const content = document.getElementById('modalContent');
   content.innerHTML = html;
@@ -224,7 +222,6 @@ function openModal(html, isWide = false) {
 }
 
 function closeModal() { 
-  // Se o cronómetro estiver a correr na súmula, pausa o relógio para não gerar erros no fundo
   if (state.currentSumula && state.currentSumula.timer && state.currentSumula.timer.interval) {
     clearInterval(state.currentSumula.timer.interval);
   }
@@ -878,8 +875,29 @@ async function undoMatchResultDE(tournamentId, jogoId) {
 }
 
 // ============================================================
-// LÓGICA DA SÚMULA ONLINE E TEMPORIZADOR
+// LÓGICA DA SÚMULA ONLINE, TEMPORIZADOR E AUTO-SAVE
 // ============================================================
+
+function saveSumulaLocal() {
+  if (!state.currentSumula) return;
+  const s = state.currentSumula;
+  
+  // Clone seguro para guardar na memória (sem dados circulares e pausado)
+  const backup = {
+    tournamentId: s.tournamentId, matchId: s.matchId, modality: s.modality,
+    dataA: s.dataA, dataB: s.dataB, scoreA: s.scoreA, scoreB: s.scoreB,
+    faltantesA: s.faltantesA, faltantesB: s.faltantesB,
+    timer: { totalSeconds: s.timer.totalSeconds, isRunning: false, interval: null }
+  };
+  
+  localStorage.setItem('sumulaBackup_' + s.matchId, JSON.stringify(backup));
+  
+  const autoSaveText = document.getElementById('autoSaveText');
+  if(autoSaveText) {
+     const now = new Date();
+     autoSaveText.textContent = `🟢 Salvo localmente às ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+  }
+}
 
 function formatTime(secs) {
   const m = Math.floor(secs / 60).toString().padStart(2, '0');
@@ -888,8 +906,10 @@ function formatTime(secs) {
 }
 
 function toggleTimer() {
+  initAudio(); // Exigência do navegador: áudio só inicia com clique do utilizador
   const t = state.currentSumula.timer;
   if (!t) return;
+  
   if (t.isRunning) {
     clearInterval(t.interval);
     t.isRunning = false;
@@ -898,14 +918,22 @@ function toggleTimer() {
     t.interval = setInterval(() => {
       if (t.totalSeconds > 0) {
         t.totalSeconds--;
+        
+        // Avisos Sonoros Mágicos
+        if (t.totalSeconds === 60) playOneMinuteWarning();
+        if (t.totalSeconds === 0) playEndWarning();
+
         const display = document.getElementById('timerDisplay');
         if (display) display.textContent = formatTime(t.totalSeconds);
       } else {
         clearInterval(t.interval);
         t.isRunning = false;
-        alert('⏱️ O Tempo Esgotou!');
         renderSumulaModal(); 
       }
+      
+      // Auto-save a cada 5 segundos que correm no relógio
+      if(t.totalSeconds % 5 === 0) saveSumulaLocal();
+      
     }, 1000);
   }
   renderSumulaModal();
@@ -918,6 +946,19 @@ function adjustTimer(mins) {
   if (t.totalSeconds < 0) t.totalSeconds = 0;
   const display = document.getElementById('timerDisplay');
   if (display) display.textContent = formatTime(t.totalSeconds);
+  saveSumulaLocal();
+}
+
+function resetTimer() {
+  if(!confirm('Deseja reiniciar o relógio para 15:00?')) return;
+  const t = state.currentSumula.timer;
+  if (t.isRunning) {
+    clearInterval(t.interval);
+    t.isRunning = false;
+  }
+  t.totalSeconds = 15 * 60;
+  renderSumulaModal();
+  saveSumulaLocal();
 }
 
 function openSumulaModal(tournamentId, matchId) {
@@ -933,6 +974,27 @@ function openSumulaModal(tournamentId, matchId) {
   const teamA = state.teams.find(x => x.id === slotA.teamId);
   const teamB = state.teams.find(x => x.id === slotB.teamId);
 
+  // Verificação Mágica do Auto-Save!
+  const backupStr = localStorage.getItem('sumulaBackup_' + matchId);
+  if (backupStr) {
+    if (confirm('Foi encontrada uma súmula em andamento salva no seu dispositivo para este jogo.\n\nDeseja restaurá-la de onde parou?')) {
+      const backup = JSON.parse(backupStr);
+      state.currentSumula = {
+        tournamentId, matchId, modality: t.modality,
+        teamA, teamB, // Injetando as equipas originais de novo
+        dataA: backup.dataA, dataB: backup.dataB,
+        scoreA: backup.scoreA, scoreB: backup.scoreB,
+        faltantesA: backup.faltantesA, faltantesB: backup.faltantesB,
+        timer: { totalSeconds: backup.timer.totalSeconds, isRunning: false, interval: null }
+      };
+      renderSumulaModal();
+      return;
+    } else {
+      localStorage.removeItem('sumulaBackup_' + matchId); // Limpa se recusar
+    }
+  }
+
+  // Inicializa Nova Súmula (Zerada)
   state.currentSumula = {
     tournamentId, matchId, modality: t.modality,
     teamA, teamB, dataA: {}, dataB: {},
@@ -986,23 +1048,20 @@ function updateSum(teamStr, athName, field, increment = true) {
   
   if (field === 'base') {
     if (!d.base) {
-      // É nova base: desmarca todas as outras do time
       Object.values(s[teamStr]).forEach(v => { v.base = false; v.returned = false; });
       d.base = true;
     } else {
-      // Remove a base atual
-      d.base = false;
-      d.returned = false;
+      d.base = false; d.returned = false;
     }
   } else if (field === 'returned') {
     d.returned = !d.returned;
   } else if (field === 'yellow') {
     if (increment) {
       d.yellow++;
-      // Regra dos 4 Cartões: Eliminação Automática na Queimada
+      // Regra dos 4 Cartões: Queima na hora
       if (isQ) {
         const totalY = Object.values(s[teamStr]).reduce((sum, a) => sum + a.yellow, 0);
-        if (totalY >= 4) {
+        if (totalY >= 4 && !d.burned) {
           d.burned = true;
           setTimeout(() => alert(`⚠️ Limite de Cartões da Equipe!\nEste é o ${totalY}º cartão amarelo.\nO atleta ${athName} foi queimado automaticamente.`), 50);
         }
@@ -1018,6 +1077,7 @@ function updateSum(teamStr, athName, field, increment = true) {
   }
   
   renderSumulaModal(); 
+  saveSumulaLocal(); // Salva a cada clique humano!
 }
 
 function renderSumulaModal() {
@@ -1027,7 +1087,6 @@ function renderSumulaModal() {
 
   const buildRows = (team, dataObj, teamStr) => {
     return (team.athletes || [])
-      // Ordenação: Base vai sempre para o fim da lista
       .sort((x, y) => {
         const dx = dataObj[x.name];
         const dy = dataObj[y.name];
@@ -1038,7 +1097,6 @@ function renderSumulaModal() {
       .map(a => {
         const d = dataObj[a.name];
         if (isQ) {
-          // Checkbox para o retorno ao meio
           let returnHtml = '';
           if (d.base) {
             returnHtml = `<label style="margin-left:10px; font-size:0.75rem; cursor:pointer; color:#555; background:#eee; padding:2px 6px; border-radius:4px; border:1px solid #ccc; display:inline-flex; align-items:center; gap:4px;">
@@ -1084,7 +1142,7 @@ function renderSumulaModal() {
       <button class="close-btn" onclick="app.closeModal()">×</button>
     </div>
     
-    <div style="display:flex; justify-content:center; align-items:center; gap:40px; margin-bottom: 10px; flex-wrap:wrap;">
+    <div style="display:flex; justify-content:center; align-items:center; gap:30px; margin-bottom: 10px; flex-wrap:wrap;">
       <div class="sumula-scoreboard">
         <span id="sumScoreA">${s.scoreA}</span> <span class="vs">X</span> <span id="sumScoreB">${s.scoreB}</span>
       </div>
@@ -1096,6 +1154,7 @@ function renderSumulaModal() {
         <button class="timer-btn" style="margin-left: 10px; background: ${s.timer.isRunning ? '#f44336' : '#4caf50'}; min-width: 100px;" onclick="app.toggleTimer()">
           ${s.timer.isRunning ? '⏸ Pausar' : '▶ Iniciar'}
         </button>
+        <button class="timer-btn-reset" style="margin-left: 5px;" onclick="app.resetTimer()">⟲</button>
       </div>
     </div>
 
@@ -1126,6 +1185,7 @@ function renderSumulaModal() {
     </div>
     
     <div class="sumula-footer">
+      <span id="autoSaveText" style="font-size: 0.8rem; color: #4caf50;"></span>
       <button class="accent" style="font-size: 1.1rem; padding: 10px 30px;" onclick="app.finishSumula()">Salvar Súmula Oficial</button>
     </div>
   `;
@@ -1145,6 +1205,9 @@ async function finishSumula() {
   const detailsObj = { dataA: s.dataA, dataB: s.dataB };
   
   await executeSaveResult(s.tournamentId, s.matchId, s.scoreA, s.scoreB, winnerIdx, detailsObj);
+  
+  // Limpa o Backup pois o jogo já foi salvo oficialmente no Firebase
+  localStorage.removeItem('sumulaBackup_' + s.matchId);
   closeModal();
 }
 
@@ -1474,6 +1537,7 @@ function toggleSidebar() {
   if (overlay) overlay.classList.toggle('active');
 }
 
+// Exportações Globais
 window.app = {
   login, logout, show,
   openSchoolModal, saveSchool, deleteSchool,
@@ -1488,5 +1552,5 @@ window.app = {
   openAthletes, addAthlete, removeAthlete,
   loadProfTournaments, openProfTournamentDetail, toggleSidebar,
   renderGeneralStandings,
-  openSumulaModal, updateSum, finishSumula, toggleTimer, adjustTimer
+  openSumulaModal, updateSum, finishSumula, toggleTimer, adjustTimer, resetTimer
 };
