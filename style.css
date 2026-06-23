@@ -150,30 +150,34 @@ td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .close-btn { background: #eee; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
 
-/* Adicionado para a Súmula (Tela Larga) */
-.modal.modal-wide { max-width: 95vw; height: 90vh; display: flex; flex-direction: column; }
+/* SÚMULA (COMPACTADA PARA CABER 12 ALUNOS SEM SCROLL) */
+.modal.modal-wide { max-width: 95vw; height: 95vh; display: flex; flex-direction: column; padding: 20px; }
 .sumula-container { display: flex; gap: 20px; flex: 1; overflow-y: hidden; }
 .sumula-team { flex: 1; background: #fafafa; border: 1px solid #eee; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
-.sumula-team h4 { padding: 12px; background: #e0e0e0; color: #333; text-align: center; margin: 0; border-bottom: 2px solid #ccc; font-size: 1.1rem; }
+.sumula-team h4 { padding: 6px; background: #e0e0e0; color: #333; text-align: center; margin: 0; border-bottom: 2px solid #ccc; font-size: 1rem; }
 .sumula-team.team-a h4 { border-bottom-color: var(--primary); }
 .sumula-team.team-b h4 { border-bottom-color: var(--accent); }
 .sumula-table-wrapper { flex: 1; overflow-y: auto; }
 .sumula-table { width: 100%; border-collapse: collapse; min-width: 100%; }
-.sumula-table th { background: #f0f0f0; font-size: 0.75rem; position: sticky; top: 0; z-index: 10; padding: 8px; }
-.sumula-table td { padding: 8px; vertical-align: middle; border-bottom: 1px solid #ddd; font-size: 0.9rem; }
+
+/* Espaçamentos reduzidos para as tabelas */
+.sumula-table th { background: #f0f0f0; font-size: 0.75rem; position: sticky; top: 0; z-index: 10; padding: 4px; }
+.sumula-table td { padding: 3px 6px; vertical-align: middle; border-bottom: 1px solid #ddd; font-size: 0.85rem; }
 .sumula-table tr:hover { background: #f5f5f5; }
 
-.action-btn { background: #eee; border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; font-size: 1rem; cursor: pointer; color: #333; display: inline-flex; align-items: center; justify-content: center; min-width: 32px; font-weight: bold; }
+/* Botões menores */
+.action-btn { background: #eee; border: 1px solid #ccc; border-radius: 4px; padding: 2px 6px; font-size: 0.9rem; cursor: pointer; color: #333; display: inline-flex; align-items: center; justify-content: center; min-width: 28px; font-weight: bold; margin: 0 2px; }
 .action-btn:hover { background: #ddd; }
 .action-btn.active-yellow { background: #ffeb3b; border-color: #fbc02d; }
 .action-btn.active-red { background: #f44336; border-color: #d32f2f; color: white; }
 .action-btn.active-burn { background: #ff5722; color: white; border-color: #e64a19; }
 .action-btn.active-base { background: #2196f3; color: white; border-color: #1976d2; }
+.action-btn.active-return { background: #4caf50; color: white; border-color: #388e3c; } /* NOVO: Botão Voltou ao Meio */
 
-.sumula-scoreboard { text-align: center; font-size: 2.5rem; font-weight: 900; color: var(--sidebar); margin-bottom: 15px; letter-spacing: 2px; }
+.sumula-scoreboard { text-align: center; font-size: 2rem; font-weight: 900; color: var(--sidebar); margin-bottom: 5px; letter-spacing: 2px; }
 .sumula-scoreboard span { padding: 0 15px; }
 .sumula-scoreboard .vs { font-size: 1.5rem; color: #999; }
-.sumula-footer { border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px; text-align: right; }
+.sumula-footer { border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px; text-align: right; }
 
 /* ============================================================
    CHAVEAMENTOS (BRACKETS)
