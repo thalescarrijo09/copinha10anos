@@ -146,7 +146,7 @@ td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
   display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;
 }
-.modal { background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; transition: max-width 0.3s ease;}
+.modal { background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; overflow-x: hidden; transition: max-width 0.3s ease;}
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .close-btn { background: #eee; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
 
@@ -157,7 +157,7 @@ td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
 .sumula-team h4 { padding: 6px; background: #e0e0e0; color: #333; text-align: center; margin: 0; border-bottom: 2px solid #ccc; font-size: 1rem; }
 .sumula-team.team-a h4 { border-bottom-color: var(--primary); }
 .sumula-team.team-b h4 { border-bottom-color: var(--accent); }
-.sumula-table-wrapper { flex: 1; overflow-y: auto; }
+.sumula-table-wrapper { flex: 1; overflow-y: auto; overflow-x: auto; }
 .sumula-table { width: 100%; border-collapse: collapse; min-width: 100%; }
 
 /* Espaçamentos reduzidos para as tabelas */
@@ -182,7 +182,7 @@ td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
 .sumula-footer { border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px; display:flex; justify-content: space-between; align-items: center;}
 
 /* Cronómetro Digital */
-.timer-box { display: flex; align-items: center; justify-content: center; gap: 8px; background: #e0e0e0; padding: 6px 12px; border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+.timer-box { display: flex; align-items: center; justify-content: center; gap: 8px; background: #e0e0e0; padding: 6px 12px; border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); flex-wrap: wrap;}
 .timer-display { font-size: 2.2rem; font-family: 'Courier New', Courier, monospace; font-weight: bold; color: var(--sidebar); min-width: 110px; text-align: center; line-height: 1; margin-top: 2px;}
 .timer-btn { background: #78909c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.95rem; font-weight:bold; }
 .timer-btn:hover { background: #607d8b; }
@@ -297,7 +297,11 @@ input.inline-score {
   .match-actions { padding-left: 0; border-left: none; width: 100%; flex-direction: row; gap: 6px; }
   .match-actions button { flex: 1; width: auto; }
 
-  /* Permite que no celular a súmula faça scroll */
-  .sumula-container { flex-direction: column; overflow-y: auto; }
-  .modal.modal-wide { height: 95vh; padding: 15px; }
+  /* Correções Cruciais para o Modal no Telemóvel não fugir do ecrã */
+  .modal { width: 95%; max-width: 100%; padding: 15px; max-height: 95vh; }
+  .modal-wide { height: 95vh; width: 98%; padding: 10px; }
+  .sumula-container { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+  .sumula-team { width: 100%; flex: none; margin-bottom: 15px; }
+  table { min-width: 100%; } /* Permite que as tabelas encolham no telemóvel */
+  .sumula-table-wrapper { overflow-x: auto; }
 }
