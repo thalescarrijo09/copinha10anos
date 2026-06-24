@@ -510,7 +510,7 @@ async function deleteTournament(id) {
 }
 
 // ============================================================
-// MODAL DE PLANTEL SIMPLES (CLIQUE NO NOME)
+// MODAL DE PLANTEL SIMPLES (CLIQUE NO NOME NO CHAVEAMENTO)
 // ============================================================
 
 async function openTeamSquadModal(teamId) {
@@ -534,10 +534,10 @@ async function openTeamSquadModal(teamId) {
 
   if (isEditable) {
     html += `
-      <div class="flex mb athlete-inputs mt">
+      <div class="athlete-inputs mt mb">
         <input type="text" id="squadAthleteName" placeholder="Nome do atleta">
         <input type="number" id="squadAthleteNumber" placeholder="Nº">
-        <button onclick="app.addAthleteToSquad('${team.id}')">Adicionar</button>
+        <button class="accent" onclick="app.addAthleteToSquad('${team.id}')">Adicionar</button>
       </div>
     `;
   } else {
@@ -573,21 +573,20 @@ function renderSquadTable(team, isEditable) {
       <tr>
         <td style="text-align:center; font-weight:bold;">${a.number ?? '-'}</td>
         <td>${a.name}</td>
-        ${isEditable ? `<td style="text-align:center;">
-          <button class="secondary small-btn" style="padding:4px 8px; margin:0;" onclick="app.editAthleteFromSquad('${team.id}', ${a._idx})" title="Editar Nº">✏️</button>
-          <button class="danger small-btn" style="padding:4px 8px; margin:0;" onclick="app.removeAthleteFromSquad('${team.id}', ${a._idx})" title="Excluir">🗑️</button>
+        ${isEditable ? `<td style="text-align:center; white-space:nowrap;">
+          <button class="secondary small-btn" style="padding:4px 8px; margin:2px;" onclick="app.editAthleteFromSquad('${team.id}', ${a._idx})" title="Editar Nº">✏️</button>
+          <button class="danger small-btn" style="padding:4px 8px; margin:2px;" onclick="app.removeAthleteFromSquad('${team.id}', ${a._idx})" title="Excluir">🗑️</button>
         </td>` : ''}
       </tr>`).join('');
 }
 
-// NOVO: Função para o professor editar rapidamente o número na Súmula Simples
 async function editAthleteFromSquad(teamId, idx) {
   const team = state.currentSquadTeam;
   if (!team || team.id !== teamId) return;
   const athlete = team.athletes[idx];
   
   const newNumberStr = prompt(`Digite o novo número para o(a) atleta ${athlete.name}:`, athlete.number || '');
-  if (newNumberStr === null) return; // Cancelou a operação
+  if (newNumberStr === null) return; 
   
   const newNumber = newNumberStr.trim() === '' ? null : parseInt(newNumberStr);
   const athletes = [...team.athletes];
@@ -852,7 +851,6 @@ async function startTournament() {
   alert('Torneio iniciado!'); openTournamentDetail(tournament.id);
 }
 
-// Salva de forma manual via botão "Salvar" direto no Card
 async function saveInlineResultDE(tournamentId, jogoId) {
   const scoreAInput = document.getElementById(`match_${jogoId}_score0`);
   const scoreBInput = document.getElementById(`match_${jogoId}_score1`);
@@ -872,7 +870,6 @@ async function saveInlineResultDE(tournamentId, jogoId) {
   await executeSaveResult(tournamentId, jogoId, scoreA, scoreB, winnerIdx, null);
 }
 
-// Função centralizada para gravar o resultado no banco (Usada pelo Card e pela Súmula)
 async function executeSaveResult(tournamentId, jogoId, scoreA, scoreB, winnerIdx, detailsObj) {
   const t = state.tournaments.find(x => x.id === tournamentId) || state.currentTournament;
   const results = { ...(t.results || {}) };
@@ -1151,12 +1148,12 @@ function renderSumulaModal() {
           return `<tr>
             <td style="text-align:center; font-weight:bold;">${a.number||'-'}</td>
             <td>${a.name}</td>
-            <td style="text-align:center;">
+            <td style="text-align:center; white-space:nowrap;">
               <button class="action-btn" onclick="app.updateSum('${teamStr}', '${a.name}', 'goals', false)">-</button>
               <span style="display:inline-block; width:20px; font-weight:bold;">${d.goals}</span>
               <button class="action-btn" style="color:var(--sidebar);" onclick="app.updateSum('${teamStr}', '${a.name}', 'goals', true)">+</button>
             </td>
-            <td style="text-align:center;">
+            <td style="text-align:center; white-space:nowrap;">
               <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
               <button class="action-btn ${d.red>0?'active-red':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'red')">🟥 ${d.red>0?d.red:''}</button>
             </td>
@@ -1501,7 +1498,6 @@ function renderAthletes() {
       </tr>`).join('');
 }
 
-// NOVO: Função para o professor editar rapidamente o número no seu próprio painel de Atletas
 async function editAthlete(idx) {
   const team = state.currentTeam;
   if (!team) return;
