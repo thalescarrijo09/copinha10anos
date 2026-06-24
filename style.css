@@ -116,6 +116,11 @@ th { color: #555; font-weight: 600; font-size: 0.85rem; text-transform: uppercas
 td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
 #generalStandingsTable td { vertical-align: middle; }
 
+/* Inputs de Atletas com Flexbox mais seguro */
+.athlete-inputs { display: flex; gap: 10px; align-items: center; width: 100%; box-sizing: border-box; }
+.athlete-inputs input { flex: 1; margin: 0; }
+.athlete-inputs button { white-space: nowrap; margin: 0; }
+
 /* ============================================================
    BADGES E COMPONENTES
    ============================================================ */
@@ -146,9 +151,9 @@ td button { padding: 6px 14px; font-size: 0.85rem; margin: 2px; }
   display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;
 }
-.modal { background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; overflow-x: hidden; transition: max-width 0.3s ease;}
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.close-btn { background: #eee; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+.modal { background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; overflow-x: hidden; transition: max-width 0.3s ease; box-sizing: border-box;}
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; width: 100%; }
+.close-btn { background: #eee; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; flex-shrink: 0; }
 
 /* SÚMULA (COMPACTADA PARA CABER 12 ALUNOS SEM SCROLL) */
 .modal.modal-wide { max-width: 95vw; height: 95vh; display: flex; flex-direction: column; padding: 20px; }
@@ -290,18 +295,42 @@ input.inline-score {
   .menu-btn { background: transparent; border: 1px solid rgba(255,255,255,0.4); color: white; padding: 6px 12px; font-size: 1.1rem; border-radius: 6px; margin: 0; width: auto; }
   .mobile-title { font-size: 1.1rem; font-weight: bold; color: var(--accent); }
   
-  .athlete-inputs { flex-direction: column; }
-  .athlete-inputs input, .athlete-inputs button { width: 100%; }
-  
   .match-card { flex-direction: column; align-items: stretch; gap: 12px; }
   .match-actions { padding-left: 0; border-left: none; width: 100%; flex-direction: row; gap: 6px; }
   .match-actions button { flex: 1; width: auto; }
 
-  /* Correções Cruciais para o Modal no Telemóvel não fugir do ecrã */
-  .modal { width: 95%; max-width: 100%; padding: 15px; max-height: 95vh; }
-  .modal-wide { height: 95vh; width: 98%; padding: 10px; }
+  /* MÁGICA DA RESPONSIVIDADE DOS MODAIS NO TELEMÓVEL */
+  .modal { 
+    width: 95vw !important; 
+    max-width: 95vw !important; 
+    padding: 15px !important; 
+    max-height: 90vh !important; 
+    overflow-x: hidden !important; 
+    box-sizing: border-box !important;
+  }
+  
+  .modal-wide { 
+    height: 95vh !important; 
+    width: 98vw !important; 
+    max-width: 98vw !important; 
+    padding: 10px !important; 
+  }
+  
+  .table-responsive { 
+    width: 100% !important; 
+    max-width: 100% !important; 
+    overflow-x: auto !important; 
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* A tabela precisa de um tamanho mínimo para gerar scroll horizontal apenas na área dela */
+  table { min-width: 420px !important; } 
+  
   .sumula-container { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
   .sumula-team { width: 100%; flex: none; margin-bottom: 15px; }
-  table { min-width: 100%; } /* Permite que as tabelas encolham no telemóvel */
   .sumula-table-wrapper { overflow-x: auto; }
+
+  /* Força os inputs de cadastro a empilharem-se e ficarem a 100% */
+  .athlete-inputs { flex-direction: column; align-items: stretch; }
+  .athlete-inputs input, .athlete-inputs button { width: 100% !important; margin: 0 !important; box-sizing: border-box; }
 }
