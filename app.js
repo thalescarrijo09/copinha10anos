@@ -173,7 +173,6 @@ function show(viewId) {
   if (viewId === 'generalStandings') { renderGeneralStandings(); }
   
   const sidebar = document.querySelector('.sidebar');
-  const overlay = document.querySelector('.sidebar-overlay');
   if(sidebar && sidebar.classList.contains('active')) {
     toggleSidebar();
   }
@@ -210,9 +209,6 @@ function renderSchoolsTable() {
       <button class="danger" onclick="app.deleteSchool('${s.id}')">Excluir</button></td></tr>`).join('');
 }
 
-// ----------------------------------------------------
-// SISTEMA DE MODAL
-// ----------------------------------------------------
 function openModal(html, isWide = false) {
   const content = document.getElementById('modalContent');
   content.innerHTML = html;
@@ -574,8 +570,8 @@ function renderSquadTable(team, isEditable) {
         <td style="text-align:center; font-weight:bold;">${a.number ?? '-'}</td>
         <td>${a.name}</td>
         ${isEditable ? `<td style="text-align:center; white-space:nowrap;">
-          <button class="secondary small-btn" onclick="app.editAthleteFromSquad('${team.id}', ${a._idx})" title="Editar Nº">✏️</button>
-          <button class="danger small-btn" onclick="app.removeAthleteFromSquad('${team.id}', ${a._idx})" title="Excluir">🗑️</button>
+          <button class="secondary small-btn" style="padding:4px 8px; margin:2px;" onclick="app.editAthleteFromSquad('${team.id}', ${a._idx})" title="Editar Nº">✏️</button>
+          <button class="danger small-btn" style="padding:4px 8px; margin:2px;" onclick="app.removeAthleteFromSquad('${team.id}', ${a._idx})" title="Excluir">🗑️</button>
         </td>` : ''}
       </tr>`).join('');
 }
@@ -734,9 +730,9 @@ function renderMatchCardDE(map, m, seeds, results, readOnly, tournamentId) {
   const actionHtml = winnerIdx !== undefined && !readOnly
     ? `<button class="secondary small-btn" onclick="app.undoMatchResultDE('${tournamentId}', ${m.id})">Desfazer</button>`
     : canEdit
-      ? `<div style="display:flex; flex-direction:column; gap:4px;">
-           <button class="secondary small-btn" style="background:#e0e0e0; color:#333; border: 1px solid #ccc;" onclick="app.openSumulaModal('${tournamentId}', ${m.id})">⚽ Súmula</button>
-           <button class="accent small-btn" onclick="app.saveInlineResultDE('${tournamentId}', ${m.id})">Salvar</button>
+      ? `<div style="display:flex; flex-direction:column; gap:6px; align-items:stretch; width: 100%;">
+           <button class="secondary small-btn" style="background:#e0e0e0; color:#333; border: 1px solid #ccc; margin:0; padding:6px; text-align:center;" onclick="app.openSumulaModal('${tournamentId}', ${m.id})">⚽ Súmula</button>
+           <button class="accent small-btn" style="margin:0; padding:6px; text-align:center;" onclick="app.saveInlineResultDE('${tournamentId}', ${m.id})">Salvar</button>
          </div>`
       : bothDecided && readOnly 
         ? '<span class="badge" style="background:#fffde7;">Aguardando</span>'
@@ -1088,10 +1084,11 @@ function updateSum(teamStr, athName, field, increment = true) {
     if (increment) {
       d.yellow++;
       if (isQ) {
+        // Regra dos 4 Cartões: O 4º amarelo coletivo (e os seguintes) queima o atleta na hora!
         const totalY = Object.values(s[teamStr]).reduce((sum, a) => sum + a.yellow, 0);
-        if (totalY >= 4 && !d.burned) {
+        if (totalY > 3 && !d.burned) {
           d.burned = true;
-          setTimeout(() => alert(`⚠️ Limite de Cartões da Equipe!\nEste é o ${totalY}º cartão amarelo.\nO atleta ${athName} foi queimado automaticamente.`), 50);
+          setTimeout(() => alert(`⚠️ Limite de Cartões da Equipe!\nEste é o ${totalY}º cartão amarelo coletivo.\nO atleta ${athName} foi queimado automaticamente.`), 50);
         }
       }
     } else {
