@@ -52,7 +52,7 @@ function playOneMinuteWarning() {
   playBeep(880, 200); setTimeout(() => playBeep(880, 200), 300);
 }
 function playEndWarning() {
-  playBeep(600, 1500, 'square'); // Apito longo e chamativo
+  playBeep(600, 1500, 'square');
 }
 
 /* ============================================================
@@ -225,7 +225,6 @@ function openModal(html, isWide = false) {
 }
 
 function closeModal() { 
-  // Se o cronómetro estiver a correr na súmula, pausa o relógio
   if (state.currentSumula && state.currentSumula.timer && state.currentSumula.timer.interval) {
     clearInterval(state.currentSumula.timer.interval);
   }
@@ -548,7 +547,7 @@ async function openTeamSquadModal(teamId) {
   html += `
     <div class="table-responsive mt">
       <table>
-        <thead><tr><th style="width: 50px; text-align:center;">Nº</th><th>Nome do Atleta</th>${isEditable ? '<th style="width: 80px;">Ações</th>' : ''}</tr></thead>
+        <thead><tr><th style="width: 50px; text-align:center;">Nº</th><th>Nome do Atleta</th>${isEditable ? '<th style="width: 90px; text-align:center;">Ações</th>' : ''}</tr></thead>
         <tbody id="squadAthletesTable"></tbody>
       </table>
     </div>
@@ -574,8 +573,40 @@ function renderSquadTable(team, isEditable) {
       <tr>
         <td style="text-align:center; font-weight:bold;">${a.number ?? '-'}</td>
         <td>${a.name}</td>
-        ${isEditable ? `<td><button class="danger small-btn" style="padding:4px 8px; margin:0;" onclick="app.removeAthleteFromSquad('${team.id}', ${a._idx})">Excluir</button></td>` : ''}
+        ${isEditable ? `<td style="text-align:center;">
+          <button class="secondary small-btn" style="padding:4px 8px; margin:0;" onclick="app.editAthleteFromSquad('${team.id}', ${a._idx})" title="Editar Nº">✏️</button>
+          <button class="danger small-btn" style="padding:4px 8px; margin:0;" onclick="app.removeAthleteFromSquad('${team.id}', ${a._idx})" title="Excluir">🗑️</button>
+        </td>` : ''}
       </tr>`).join('');
+}
+
+// NOVO: Função para o professor editar rapidamente o número na Súmula Simples
+async function editAthleteFromSquad(teamId, idx) {
+  const team = state.currentSquadTeam;
+  if (!team || team.id !== teamId) return;
+  const athlete = team.athletes[idx];
+  
+  const newNumberStr = prompt(`Digite o novo número para o(a) atleta ${athlete.name}:`, athlete.number || '');
+  if (newNumberStr === null) return; // Cancelou a operação
+  
+  const newNumber = newNumberStr.trim() === '' ? null : parseInt(newNumberStr);
+  const athletes = [...team.athletes];
+  athletes[idx].number = newNumber;
+  
+  await updateDoc(doc(db, 'teams', teamId), { athletes });
+  team.athletes = athletes;
+  
+  const tIdx = state.teams.findIndex(t => t.id === teamId);
+  if(tIdx > -1) state.teams[tIdx].athletes = athletes;
+  const ptIdx = state.profTeams.findIndex(t => t.id === teamId);
+  if(ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
+
+  renderSquadTable(team, true);
+
+  if (state.currentTeam && state.currentTeam.id === teamId) {
+    state.currentTeam.athletes = athletes;
+    if(document.getElementById('athletesTable')) renderAthletes();
+  }
 }
 
 async function addAthleteToSquad(teamId) {
@@ -1134,7 +1165,6 @@ function renderSumulaModal() {
       }).join('');
   };
 
-  // HTML da Súmula com Hierarquia de Título, Cronómetro e Placar Empilhados
   const html = `
     <div class="modal-header" style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-start;">
       <h3 style="margin:0; font-size: 1.2rem;">⚽ Súmula Digital - ${MODALITY_LABELS[s.modality]}</h3>
@@ -1143,7 +1173,6 @@ function renderSumulaModal() {
     
     <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; gap:8px; margin-bottom: 15px;">
       
-      <!-- RELÓGIO ACIMA -->
       <div class="timer-box">
         <button class="timer-btn" style="width: auto !important; margin: 0 !important;" onclick="app.adjustTimer(-1)">-1m</button>
         <div class="timer-display" id="timerDisplay">${formatTime(s.timer.totalSeconds)}</div>
@@ -1154,7 +1183,6 @@ function renderSumulaModal() {
         <button class="timer-btn-reset" style="width: auto !important; margin: 0 0 0 5px !important; padding: 6px 12px; border-radius: 4px;" onclick="app.resetTimer()">⟲</button>
       </div>
 
-      <!-- PLACAR ABAIXO -->
       <div class="sumula-scoreboard" style="margin:0;">
         <span id="sumScoreA">${s.scoreA}</span> <span class="vs">X</span> <span id="sumScoreB">${s.scoreB}</span>
       </div>
@@ -1464,10 +1492,37 @@ function renderAthletes() {
     .sort((x, y) => (x.number || 0) - (y.number || 0))
     .map(a => `
       <tr>
-        <td>${a.number ?? '-'}</td>
+        <td style="text-align:center; font-weight:bold;">${a.number ?? '-'}</td>
         <td>${a.name}</td>
-        <td><button class="danger" onclick="app.removeAthlete(${a._idx})">Excluir</button></td>
+        <td style="text-align:center;">
+          <button class="secondary small-btn" style="padding:4px 8px; margin:0;" onclick="app.editAthlete(${a._idx})" title="Editar Nº">✏️</button>
+          <button class="danger small-btn" style="padding:4px 8px; margin:0;" onclick="app.removeAthlete(${a._idx})" title="Excluir">🗑️</button>
+        </td>
       </tr>`).join('');
+}
+
+// NOVO: Função para o professor editar rapidamente o número no seu próprio painel de Atletas
+async function editAthlete(idx) {
+  const team = state.currentTeam;
+  if (!team) return;
+  const athlete = team.athletes[idx];
+  
+  const newNumberStr = prompt(`Digite o novo número para o(a) atleta ${athlete.name}:`, athlete.number || '');
+  if (newNumberStr === null) return; 
+  
+  const newNumber = newNumberStr.trim() === '' ? null : parseInt(newNumberStr);
+  const athletes = [...team.athletes];
+  athletes[idx].number = newNumber;
+  
+  await updateDoc(doc(db, 'teams', team.id), { athletes });
+  team.athletes = athletes;
+  
+  const tIdx = state.teams.findIndex(t => t.id === team.id);
+  if(tIdx > -1) state.teams[tIdx].athletes = athletes;
+  const ptIdx = state.profTeams.findIndex(t => t.id === team.id);
+  if(ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
+
+  renderAthletes();
 }
 
 async function addAthlete() {
@@ -1548,9 +1603,9 @@ window.app = {
   openManageTeamsModal, saveTournamentTeams, deleteTournament,
   shuffleTournamentTeams, startTournament,
   saveInlineResultDE, undoMatchResultDE, executeSaveResult,
-  openTeamSquadModal, addAthleteToSquad, removeAthleteFromSquad, 
+  openTeamSquadModal, addAthleteToSquad, removeAthleteFromSquad, editAthleteFromSquad, 
   closeModal,
-  openAthletes, addAthlete, removeAthlete,
+  openAthletes, addAthlete, removeAthlete, editAthlete,
   loadProfTournaments, openProfTournamentDetail, toggleSidebar,
   renderGeneralStandings,
   openSumulaModal, updateSum, finishSumula, toggleTimer, adjustTimer, resetTimer
