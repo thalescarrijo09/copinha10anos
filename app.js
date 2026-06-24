@@ -209,6 +209,9 @@ function renderSchoolsTable() {
       <button class="danger" onclick="app.deleteSchool('${s.id}')">Excluir</button></td></tr>`).join('');
 }
 
+// ----------------------------------------------------
+// SISTEMA DE MODAL
+// ----------------------------------------------------
 function openModal(html, isWide = false) {
   const content = document.getElementById('modalContent');
   content.innerHTML = html;
@@ -730,9 +733,9 @@ function renderMatchCardDE(map, m, seeds, results, readOnly, tournamentId) {
   const actionHtml = winnerIdx !== undefined && !readOnly
     ? `<button class="secondary small-btn" onclick="app.undoMatchResultDE('${tournamentId}', ${m.id})">Desfazer</button>`
     : canEdit
-      ? `<div style="display:flex; flex-direction:column; gap:6px; align-items:stretch; width: 100%;">
-           <button class="secondary small-btn" style="background:#e0e0e0; color:#333; border: 1px solid #ccc; margin:0; padding:6px; text-align:center;" onclick="app.openSumulaModal('${tournamentId}', ${m.id})">⚽ Súmula</button>
-           <button class="accent small-btn" style="margin:0; padding:6px; text-align:center;" onclick="app.saveInlineResultDE('${tournamentId}', ${m.id})">Salvar</button>
+      ? `<div style="display:flex; flex-direction:column; gap:6px; width: 85px;">
+           <button class="secondary small-btn" style="background:#e0e0e0; color:#333; border: 1px solid #ccc; margin:0; padding:6px 0; width:100%; box-sizing:border-box; text-align:center;" onclick="app.openSumulaModal('${tournamentId}', ${m.id})">⚽ Súmula</button>
+           <button class="accent small-btn" style="margin:0; padding:6px 0; width:100%; box-sizing:border-box; text-align:center;" onclick="app.saveInlineResultDE('${tournamentId}', ${m.id})">Salvar</button>
          </div>`
       : bothDecided && readOnly 
         ? '<span class="badge" style="background:#fffde7;">Aguardando</span>'
@@ -1005,16 +1008,23 @@ function openSumulaModal(tournamentId, matchId) {
   if (backupStr) {
     if (confirm('Foi encontrada uma súmula em andamento salva no seu dispositivo para este jogo.\n\nDeseja restaurá-la de onde parou?')) {
       const backup = JSON.parse(backupStr);
-      state.currentSumula = {
-        tournamentId, matchId, modality: t.modality,
-        teamA, teamB, 
-        dataA: backup.dataA, dataB: backup.dataB,
-        scoreA: backup.scoreA, scoreB: backup.scoreB,
-        faltantesA: backup.faltantesA, faltantesB: backup.faltantesB,
-        timer: { totalSeconds: backup.timer.totalSeconds, isRunning: false, interval: null }
-      };
-      renderSumulaModal();
-      return;
+      // Blindagem: Se o backup antigo usar Strings como chaves (bug antigo), ignora-o
+      const isOldFormat = Object.keys(backup.dataA).some(k => isNaN(k));
+      if (isOldFormat) {
+          alert('A versão da súmula salva é incompatível com a nova atualização. Uma nova súmula será iniciada.');
+          localStorage.removeItem('sumulaBackup_' + matchId);
+      } else {
+          state.currentSumula = {
+            tournamentId, matchId, modality: t.modality,
+            teamA, teamB, 
+            dataA: backup.dataA, dataB: backup.dataB,
+            scoreA: backup.scoreA, scoreB: backup.scoreB,
+            faltantesA: backup.faltantesA, faltantesB: backup.faltantesB,
+            timer: { totalSeconds: backup.timer.totalSeconds, isRunning: false, interval: null }
+          };
+          renderSumulaModal();
+          return;
+      }
     } else {
       localStorage.removeItem('sumulaBackup_' + matchId);
     }
@@ -1030,8 +1040,9 @@ function openSumulaModal(tournamentId, matchId) {
   const isQueimada = t.modality === 'queimada';
   const initAtleta = () => isQueimada ? { burned: false, base: false, returned: false, yellow: 0, red: 0 } : { goals: 0, yellow: 0, red: 0 };
   
-  (teamA.athletes || []).forEach(a => state.currentSumula.dataA[a.name] = initAtleta());
-  (teamB.athletes || []).forEach(b => state.currentSumula.dataB[b.name] = initAtleta());
+  // Utiliza agora o ÍNDICE (0, 1, 2) da matriz como chave em vez do nome, blindando contra nomes duplicados
+  (teamA.athletes || []).forEach((a, i) => state.currentSumula.dataA[i] = initAtleta());
+  (teamB.athletes || []).forEach((b, i) => state.currentSumula.dataB[i] = initAtleta());
 
   if (isQueimada) {
     const faltantesA = Math.max(0, 12 - (teamA.athletes || []).length);
@@ -1066,10 +1077,15 @@ function calcSumulaScore() {
   if(pB) pB.textContent = ptsB;
 }
 
-function updateSum(teamStr, athName, field, increment = true) {
+// Alterado de athName para athIdx
+function updateSum(teamStr, athIdx, field, increment = true) {
   const s = state.currentSumula;
-  const d = s[teamStr][athName];
+  const d = s[teamStr][athIdx];
   const isQ = s.modality === 'queimada';
+  
+  // Apenas para mostrar o nome correto no alerta
+  const teamObj = teamStr === 'dataA' ? s.teamA : s.teamB;
+  const athName = teamObj.athletes[athIdx].name || 'Atleta';
   
   if (field === 'base') {
     if (!d.base) {
@@ -1084,7 +1100,7 @@ function updateSum(teamStr, athName, field, increment = true) {
     if (increment) {
       d.yellow++;
       if (isQ) {
-        // Regra dos 4 Cartões: O 4º amarelo coletivo (e os seguintes) queima o atleta na hora!
+        // Regra dos 4 Cartões: O 4º amarelo coletivo e seguintes queimam o atleta!
         const totalY = Object.values(s[teamStr]).reduce((sum, a) => sum + a.yellow, 0);
         if (totalY > 3 && !d.burned) {
           d.burned = true;
@@ -1112,20 +1128,24 @@ function renderSumulaModal() {
 
   const buildRows = (team, dataObj, teamStr) => {
     return (team.athletes || [])
+      .map((a, i) => ({ ...a, _origIdx: i })) // Passa o índice original da matriz
       .sort((x, y) => {
-        const dx = dataObj[x.name];
-        const dy = dataObj[y.name];
-        if (dx.base && !dy.base) return 1;
-        if (!dx.base && dy.base) return -1;
+        const dx = dataObj[x._origIdx];
+        const dy = dataObj[y._origIdx];
+        if (dx && dy) {
+            if (dx.base && !dy.base) return 1;
+            if (!dx.base && dy.base) return -1;
+        }
         return (x.number || 0) - (y.number || 0);
       })
       .map(a => {
-        const d = dataObj[a.name];
+        const d = dataObj[a._origIdx];
+        if (!d) return ''; // Segurança
         if (isQ) {
           let returnHtml = '';
           if (d.base) {
             returnHtml = `<label style="margin-left:10px; font-size:0.75rem; cursor:pointer; color:#555; background:#eee; padding:2px 6px; border-radius:4px; border:1px solid #ccc; display:inline-flex; align-items:center; gap:4px;">
-              <input type="checkbox" ${d.returned ? 'checked' : ''} onchange="app.updateSum('${teamStr}', '${a.name}', 'returned')"> Ao meio
+              <input type="checkbox" ${d.returned ? 'checked' : ''} onchange="app.updateSum('${teamStr}', ${a._origIdx}, 'returned')"> Ao meio
             </label>`;
           }
 
@@ -1137,24 +1157,24 @@ function renderSumulaModal() {
             <td style="${d.burned ? 'text-decoration:line-through; color:#aaa;' : ''}">
               ${a.name} ${returnHtml}
             </td>
-            <td style="text-align:center;"><button class="action-btn ${baseBtnClass}" style="min-width:32px; height:28px;" onclick="app.updateSum('${teamStr}', '${a.name}', 'base')">${baseBtnContent}</button></td>
-            <td style="text-align:center;"><button class="action-btn ${d.burned?'active-burn':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'burned')">☠️</button></td>
+            <td style="text-align:center;"><button class="action-btn ${baseBtnClass}" style="min-width:32px; height:28px;" onclick="app.updateSum('${teamStr}', ${a._origIdx}, 'base')">${baseBtnContent}</button></td>
+            <td style="text-align:center;"><button class="action-btn ${d.burned?'active-burn':''}" onclick="app.updateSum('${teamStr}', ${a._origIdx}, 'burned')">☠️</button></td>
             <td style="text-align:center;">
-              <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
+              <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', ${a._origIdx}, 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
             </td>
           </tr>`;
         } else {
           return `<tr>
             <td style="text-align:center; font-weight:bold;">${a.number||'-'}</td>
             <td>${a.name}</td>
-            <td style="text-align:center;">
-              <button class="action-btn" onclick="app.updateSum('${teamStr}', '${a.name}', 'goals', false)">-</button>
+            <td style="text-align:center; white-space:nowrap;">
+              <button class="action-btn" onclick="app.updateSum('${teamStr}', ${a._origIdx}, 'goals', false)">-</button>
               <span style="display:inline-block; width:20px; font-weight:bold;">${d.goals}</span>
-              <button class="action-btn" style="color:var(--sidebar);" onclick="app.updateSum('${teamStr}', '${a.name}', 'goals', true)">+</button>
+              <button class="action-btn" style="color:var(--sidebar);" onclick="app.updateSum('${teamStr}', ${a._origIdx}, 'goals', true)">+</button>
             </td>
-            <td style="text-align:center;">
-              <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
-              <button class="action-btn ${d.red>0?'active-red':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'red')">🟥 ${d.red>0?d.red:''}</button>
+            <td style="text-align:center; white-space:nowrap;">
+              <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', ${a._origIdx}, 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
+              <button class="action-btn ${d.red>0?'active-red':''}" onclick="app.updateSum('${teamStr}', ${a._origIdx}, 'red')">🟥 ${d.red>0?d.red:''}</button>
             </td>
           </tr>`;
         }
