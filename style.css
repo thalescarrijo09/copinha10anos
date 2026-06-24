@@ -235,8 +235,8 @@ input.inline-score {
   flex-shrink: 0;
 }
 
-.match-actions { display: flex; align-items: center; justify-content: center; padding-left: 12px; border-left: 1px solid #ddd; height: 100%; }
-.small-btn { padding: 6px 12px; font-size: 0.8rem; margin: 0; white-space: nowrap; cursor: pointer; }
+.match-actions { display: flex; align-items: center; justify-content: center; padding-left: 10px; border-left: 1px solid #ddd; }
+.small-btn { padding: 6px 12px !important; font-size: 0.8rem; margin: 0; width: auto !important; white-space: nowrap; }
 .match-vs { font-size: 0.75rem; color: #aaa; font-weight: bold; text-align: center; margin: -4px 0; }
 .winner { color: var(--primary); font-weight: bold; }
 .bye { color: #999; font-style: italic; }
@@ -321,6 +321,8 @@ input.inline-score {
 
   .sumula-container { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
   .sumula-team { width: 100%; flex: none; margin-bottom: 15px; }
+  
+  /* Permite voltar a ter o scroll lateral no telemóvel se a tabela for grande */
   .sumula-table-wrapper { overflow-x: auto; }
 
   .athlete-inputs { flex-direction: column; align-items: stretch; gap: 8px; }
