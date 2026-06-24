@@ -31,7 +31,7 @@ const CATEGORY_LABELS = { sub09: 'Sub-09', sub11: 'Sub-11' };
 const GENDER_LABELS = { masculino: 'Masculino', feminino: 'Feminino' };
 
 /* ============================================================
-   ÁUDIO SINTETIZADO (Alertas Sonoros sem Ficheiros Externos)
+   ÁUDIO SINTETIZADO (Alertas Sonoros)
    ============================================================ */
 let audioCtx = null;
 function initAudio() {
@@ -56,7 +56,7 @@ function playEndWarning() {
 }
 
 /* ============================================================
-   MAPAS FIXOS DE DUPLA ELIMINAÇÃO (7 a 10 times)
+   MAPAS FIXOS DE DUPLA ELIMINAÇÃO
    ============================================================ */
 const SEEDS = ['A','B','C','D','E','F','G','H','I','J'];
 
@@ -234,7 +234,7 @@ function closeModal() {
 function openSchoolModal(id) {
   const isEdit = !!id;
   const school = isEdit ? state.schools.find(s => s.id === id) : null;
-  openModal(`<div class="modal-header"><h3>${isEdit ? 'Editar' : 'Nova'} Escola</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
+  openModal(`<div class="modal-header"><h3 style="margin:0;">${isEdit ? 'Editar' : 'Nova'} Escola</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
     <input id="schoolName" value="${school ? school.name : ''}" placeholder="Nome da escola">
     <button onclick="app.saveSchool('${id || ''}')">Salvar</button>`);
 }
@@ -308,7 +308,7 @@ function openProfessorModal(id) {
   `).join('');
 
   openModal(`
-    <div class="modal-header"><h3>${isEdit ? 'Editar' : 'Novo'} Professor</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
+    <div class="modal-header"><h3 style="margin:0;">${isEdit ? 'Editar' : 'Novo'} Professor</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
     <input id="profName" value="${prof ? prof.name : ''}" placeholder="Nome completo">
     <input id="profEmail" value="${prof ? prof.email : ''}" placeholder="E-mail">
     <input id="profPassword" type="password" placeholder="${isEdit ? 'Nova senha (deixe em branco para não alterar)' : 'Senha de acesso'}">
@@ -411,7 +411,7 @@ function openEditTournamentModal(id) {
   const t = state.tournaments.find(x => x.id === id) || state.currentTournament;
   if (!t) return;
   openModal(`
-    <div class="modal-header"><h3>Editar Torneio</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
+    <div class="modal-header"><h3 style="margin:0;">Editar Torneio</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
     <label style="font-weight:600; display:block; margin-bottom:6px;">Nome do torneio</label>
     <input id="editTournamentName" value="${t.name}" placeholder="Nome do torneio">
     <button onclick="app.saveTournamentName('${id}')">Salvar</button>`);
@@ -460,7 +460,7 @@ function openManageTeamsModal(id) {
       </div>`).join('');
 
   openModal(`
-    <div class="modal-header"><h3>Gerenciar Times</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
+    <div class="modal-header"><h3 style="margin:0;">Gerenciar Times</h3><button class="close-btn" onclick="app.closeModal()">×</button></div>
     ${warn}
     <p class="small mb">Marque os times que devem participar deste torneio.</p>
     <div class="schools-checklist" id="manageTeamsChecklist">${listHtml}</div>
@@ -525,9 +525,9 @@ async function openTeamSquadModal(teamId) {
   const isEditable = isOwnerProfessor;
 
   let html = `
-    <div class="modal-header">
-      <h3 style="display:flex; align-items:center; gap:8px;">📋 Plantel <span style="font-size:1rem; font-weight:normal; color:#666;">(${team.name})</span></h3>
-      <button class="close-btn" style="width: auto !important; margin: 0 !important;" onclick="app.closeModal()">×</button>
+    <div class="modal-header" style="flex-wrap: nowrap;">
+      <h3 style="margin:0; font-size:1.1rem;">📋 Plantel <span style="font-size:0.9rem; font-weight:normal; color:#666;">(${team.name})</span></h3>
+      <button class="close-btn" onclick="app.closeModal()">×</button>
     </div>`;
   
   html += `<p class="small mb"><span class="badge ${team.modality}">${MODALITY_LABELS[team.modality]}</span> <span class="badge ${team.category}">${CATEGORY_LABELS[team.category]}</span> <span class="badge ${team.gender}">${GENDER_LABELS[team.gender]}</span></p>`;
@@ -547,7 +547,7 @@ async function openTeamSquadModal(teamId) {
   html += `
     <div class="table-responsive mt">
       <table>
-        <thead><tr><th style="width: 50px; text-align:center;">Nº</th><th>Nome do Atleta</th>${isEditable ? '<th style="width: 90px; text-align:center;">Ações</th>' : ''}</tr></thead>
+        <thead><tr><th style="width: 50px; text-align:center;">Nº</th><th>Nome do Atleta</th>${isEditable ? '<th style="text-align:center;">Ações</th>' : ''}</tr></thead>
         <tbody id="squadAthletesTable"></tbody>
       </table>
     </div>
@@ -574,8 +574,8 @@ function renderSquadTable(team, isEditable) {
         <td style="text-align:center; font-weight:bold;">${a.number ?? '-'}</td>
         <td>${a.name}</td>
         ${isEditable ? `<td style="text-align:center; white-space:nowrap;">
-          <button class="secondary small-btn" style="padding:4px 8px; margin:2px;" onclick="app.editAthleteFromSquad('${team.id}', ${a._idx})" title="Editar Nº">✏️</button>
-          <button class="danger small-btn" style="padding:4px 8px; margin:2px;" onclick="app.removeAthleteFromSquad('${team.id}', ${a._idx})" title="Excluir">🗑️</button>
+          <button class="secondary small-btn" onclick="app.editAthleteFromSquad('${team.id}', ${a._idx})" title="Editar Nº">✏️</button>
+          <button class="danger small-btn" onclick="app.removeAthleteFromSquad('${team.id}', ${a._idx})" title="Excluir">🗑️</button>
         </td>` : ''}
       </tr>`).join('');
 }
@@ -851,6 +851,7 @@ async function startTournament() {
   alert('Torneio iniciado!'); openTournamentDetail(tournament.id);
 }
 
+// Salva de forma manual via botão "Salvar" direto no Card
 async function saveInlineResultDE(tournamentId, jogoId) {
   const scoreAInput = document.getElementById(`match_${jogoId}_score0`);
   const scoreBInput = document.getElementById(`match_${jogoId}_score1`);
@@ -870,6 +871,7 @@ async function saveInlineResultDE(tournamentId, jogoId) {
   await executeSaveResult(tournamentId, jogoId, scoreA, scoreB, winnerIdx, null);
 }
 
+// Função centralizada para gravar o resultado no banco (Usada pelo Card e pela Súmula)
 async function executeSaveResult(tournamentId, jogoId, scoreA, scoreB, winnerIdx, detailsObj) {
   const t = state.tournaments.find(x => x.id === tournamentId) || state.currentTournament;
   const results = { ...(t.results || {}) };
@@ -1148,12 +1150,12 @@ function renderSumulaModal() {
           return `<tr>
             <td style="text-align:center; font-weight:bold;">${a.number||'-'}</td>
             <td>${a.name}</td>
-            <td style="text-align:center; white-space:nowrap;">
+            <td style="text-align:center;">
               <button class="action-btn" onclick="app.updateSum('${teamStr}', '${a.name}', 'goals', false)">-</button>
               <span style="display:inline-block; width:20px; font-weight:bold;">${d.goals}</span>
               <button class="action-btn" style="color:var(--sidebar);" onclick="app.updateSum('${teamStr}', '${a.name}', 'goals', true)">+</button>
             </td>
-            <td style="text-align:center; white-space:nowrap;">
+            <td style="text-align:center;">
               <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
               <button class="action-btn ${d.red>0?'active-red':''}" onclick="app.updateSum('${teamStr}', '${a.name}', 'red')">🟥 ${d.red>0?d.red:''}</button>
             </td>
@@ -1491,9 +1493,9 @@ function renderAthletes() {
       <tr>
         <td style="text-align:center; font-weight:bold;">${a.number ?? '-'}</td>
         <td>${a.name}</td>
-        <td style="text-align:center;">
-          <button class="secondary small-btn" style="padding:4px 8px; margin:0;" onclick="app.editAthlete(${a._idx})" title="Editar Nº">✏️</button>
-          <button class="danger small-btn" style="padding:4px 8px; margin:0;" onclick="app.removeAthlete(${a._idx})" title="Excluir">🗑️</button>
+        <td style="text-align:center; white-space:nowrap;">
+          <button class="secondary small-btn" onclick="app.editAthlete(${a._idx})" title="Editar Nº">✏️</button>
+          <button class="danger small-btn" onclick="app.removeAthlete(${a._idx})" title="Excluir">🗑️</button>
         </td>
       </tr>`).join('');
 }
