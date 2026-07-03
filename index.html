@@ -34,6 +34,7 @@
         <div class="nav-item" onclick="app.show('professors')">Professores</div>
         <div class="nav-item" onclick="app.show('teams')">Equipes</div>
         <div class="nav-item" onclick="app.show('tournaments')">Torneios e Tabelas</div>
+        <div class="nav-item" onclick="app.show('dailySchedule')">📅 Jogos do Dia</div>
         <div class="nav-item" onclick="app.show('generalStandings')" style="color: var(--accent); font-weight: bold;">🏆 Classificação Geral</div>
       </div>
       <div id="navProfessor" class="hidden">
@@ -186,7 +187,27 @@
             <button onclick="app.renderGeneralStandings()">Atualizar Tabela</button>
           </div>
           <p class="small mb">Pontuação cumulativa com base na classificação final das equipes nos torneios (Art. 33º e 34º).</p>
-          
+          <div id="view-dailySchedule" class="view hidden">
+  <div class="card">
+    <div class="card-header">
+      <h3>📅 Jogos do Dia</h3>
+      <div class="flex">
+        <input type="date" id="scheduleDate" onchange="app.loadScheduleForDate()">
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <h4 class="mb">Partidas Disponíveis</h4>
+        <div id="availableMatchesList" class="table-responsive"></div>
+      </div>
+      <div class="col">
+        <h4 class="mb">Ordem do Dia</h4>
+        <div id="scheduledMatchesList" class="table-responsive"></div>
+        <button class="accent mt" onclick="app.saveDailySchedule()">Salvar Cronograma</button>
+      </div>
+    </div>
+  </div>
+</div>
           <div class="table-responsive mt">
             <table>
               <thead>
