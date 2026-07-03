@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>11ª Copa das Escolas Municipais - Chaveamentos</title>
+  <link rel="stylesheet" href="style.css?v=103">
+</head>
+<body>
+
+  <header class="mobile-header" style="display:flex; margin:0; border-radius:0;">
+    <img src="logo.png" alt="Logo Copa" style="height:40px;">
+    <span class="mobile-title">11ª Copa das Escolas Municipais</span>
+  </header>
+
+  <main class="main-content" style="margin-left:0; max-width:900px; margin: 0 auto;">
+
+    <div class="card">
+      <h3>📅 Jogos do Dia</h3>
+      <div class="mt">
+        <label style="font-weight:600;">Escolha a data</label>
+        <input type="date" id="publicScheduleDate">
+      </div>
+      <div id="publicScheduleList" class="mt"></div>
+    </div>
+
+    <div id="view-publicTournamentList" class="card">
+      <h3>🏆 Torneios</h3>
+      <div id="publicTournamentsList"></div>
+    </div>
+
+    <div id="view-publicTournamentDetail" class="card hidden">
+      <div class="card-header">
+        <div>
+          <h3 id="pubTdName">Torneio</h3>
+          <p class="small" id="pubTdInfo"></p>
+        </div>
+        <button onclick="publicApp.backToList()">Voltar</button>
+      </div>
+      <div id="pubTdStandings" class="mt hidden"></div>
+      <div class="mt">
+        <h4 class="mb">Chaveamento</h4>
+        <div class="bracket-wrapper" id="pubTdBracket"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <div id="modalOverlay" class="modal-overlay">
+    <div class="modal" id="modalContent"></div>
+  </div>
+
+  <script type="module" src="public.js"></script>
+</body>
+</html>
