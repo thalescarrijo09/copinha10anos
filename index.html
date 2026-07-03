@@ -21,7 +21,7 @@
   </div>
 
   <div id="appView" class="app-shell">
-
+    
     <div class="sidebar-overlay" onclick="app.toggleSidebar()"></div>
 
     <div class="sidebar">
@@ -34,7 +34,6 @@
         <div class="nav-item" onclick="app.show('professors')">Professores</div>
         <div class="nav-item" onclick="app.show('teams')">Equipes</div>
         <div class="nav-item" onclick="app.show('tournaments')">Torneios e Tabelas</div>
-        <div class="nav-item" onclick="app.show('dailySchedule')">📅 Jogos do Dia</div>
         <div class="nav-item" onclick="app.show('generalStandings')" style="color: var(--accent); font-weight: bold;">🏆 Classificação Geral</div>
       </div>
       <div id="navProfessor" class="hidden">
@@ -47,7 +46,7 @@
     </div>
 
     <div class="main-content">
-
+      
       <div class="mobile-header">
         <button class="menu-btn" onclick="app.toggleSidebar()">☰ Menu</button>
         <span class="mobile-title">11ª Copa</span>
@@ -170,7 +169,7 @@
             <button class="secondary" onclick="app.shuffleTournamentTeams()">🔀 Embaralhar Ordem</button>
             <button class="accent" onclick="app.startTournament()">▶ Iniciar</button>
           </div>
-
+          
           <div id="tdStandings" class="mt hidden"></div>
 
           <div class="mt">
@@ -187,7 +186,7 @@
             <button onclick="app.renderGeneralStandings()">Atualizar Tabela</button>
           </div>
           <p class="small mb">Pontuação cumulativa com base na classificação final das equipes nos torneios (Art. 33º e 34º).</p>
-
+          
           <div class="table-responsive mt">
             <table>
               <thead>
@@ -202,34 +201,12 @@
                 </tbody>
             </table>
           </div>
-
+          
           <div class="mt" style="background: #f9f9f9; padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent);">
             <h4 style="font-size: 0.9rem; margin-bottom: 8px; color: #555;">Regras de Pontuação:</h4>
             <p class="small" style="margin-bottom: 4px;"><strong>1º Lugar:</strong> 10 pts | <strong>2º Lugar:</strong> 7 pts | <strong>3º Lugar:</strong> 4 pts</p>
             <p class="small" style="margin-bottom: 4px;"><strong>4º Lugar:</strong> 2 pts | <strong>5º ao 9º Lugar:</strong> 1 pt</p>
             <p class="small"><em>Critérios de desempate:</em> Maior número de primeiros lugares, seguido de segundos lugares, etc.</p>
-          </div>
-        </div>
-      </div>
-
-      <div id="view-dailySchedule" class="view hidden">
-        <div class="card">
-          <div class="card-header">
-            <h3>📅 Jogos do Dia</h3>
-            <div class="flex">
-              <input type="date" id="scheduleDate" onchange="app.loadScheduleForDate()">
-            </div>
-          </div>
-          <div class="row">
-            <div class="col">
-              <h4 class="mb">Partidas Disponíveis</h4>
-              <div id="availableMatchesList" class="table-responsive"></div>
-            </div>
-            <div class="col">
-              <h4 class="mb">Ordem do Dia</h4>
-              <div id="scheduledMatchesList" class="table-responsive"></div>
-              <button class="accent mt" onclick="app.saveDailySchedule()">Salvar Cronograma</button>
-            </div>
           </div>
         </div>
       </div>
@@ -278,7 +255,7 @@
             </div>
             <button onclick="app.show('profTournaments')">Voltar</button>
           </div>
-
+          
           <div id="ptdStandings" class="mt hidden"></div>
 
           <div class="bracket-wrapper" id="ptdBracket"></div>
