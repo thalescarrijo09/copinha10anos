@@ -1,7 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { MAPS, SEEDS, matchById, resolveSlot, seedsEmUso } from './bracket-utils.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCVs5lG9cjrI8nsVrqlzCCZNp5vn4DHlkw",
