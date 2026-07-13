@@ -1,6 +1,29 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  writeBatch
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  getFunctions,
+  httpsCallable
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCVs5lG9cjrI8nsVrqlzCCZNp5vn4DHlkw",
@@ -15,7 +38,15 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
-const API_KEY = firebaseConfig.apiKey;
+
+// Use "southamerica-east1" somente se suas Cloud Functions forem implantadas nessa região.
+// Caso use a região padrão us-central1, remova o segundo argumento.
+const functions = getFunctions(fbApp, "southamerica-east1");
+
+const createProfessorFunction = httpsCallable(functions, "createProfessor");
+const updateProfessorFunction = httpsCallable(functions, "updateProfessor");
+const deleteProfessorFunction = httpsCallable(functions, "deleteProfessor");
+
 
 const state = {
   currentUser: null, userRole: null,
@@ -199,6 +230,42 @@ async function loadSchools() {
   const snap = await getDocs(query(collection(db, 'schools'), orderBy('name')));
   state.schools = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
+async function loadTeams() {
+  const snap = await getDocs(collection(db, "teams"));
+
+  state.teams = snap.docs.map((document) => ({
+    id: document.id,
+    ...document.data()
+  }));
+}
+
+function loadSchoolsForChecklist() {
+  const container = document.getElementById("schoolsChecklist");
+
+  if (!container) return;
+
+  if (state.schools.length === 0) {
+    container.innerHTML = `
+      <div class="empty">
+        Nenhuma escola cadastrada. Cadastre uma escola antes de criar times.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = state.schools.map((school) => `
+    <div class="school-check-item">
+      <input
+        type="checkbox"
+        value="${school.id}"
+        id="chk_${school.id}"
+      >
+      <label for="chk_${school.id}">
+        ${school.name}
+      </label>
+    </div>
+  `).join("");
+}
 
 function renderSchoolsTable() {
   const tbody = document.getElementById('schoolsTable');
@@ -247,9 +314,55 @@ async function saveSchool(id) {
 }
 
 async function deleteSchool(id) {
-  if (!confirm('Excluir esta escola?')) return;
-  await deleteDoc(doc(db, 'schools', id));
-  await loadSchools(); renderSchoolsTable(); loadSchoolsForChecklist(); renderDashboard();
+  const school = state.schools.find((item) => item.id === id);
+
+  const hasTeams = state.teams.some((team) => team.schoolId === id);
+
+  const hasProfessors = state.professors.some((professor) => {
+    const schoolIds = professor.schoolIds ||
+      (professor.schoolId ? [professor.schoolId] : []);
+
+    return schoolIds.includes(id);
+  });
+
+  if (hasTeams || hasProfessors) {
+    const dependencies = [];
+
+    if (hasTeams) {
+      dependencies.push("times cadastrados");
+    }
+
+    if (hasProfessors) {
+      dependencies.push("professores vinculados");
+    }
+
+    alert(
+      `A escola "${school?.name || "selecionada"}" não pode ser excluída porque possui ${dependencies.join(" e ")}.`
+    );
+
+    return;
+  }
+
+  const confirmed = confirm(
+    `Excluir a escola "${school?.name || "selecionada"}"?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await deleteDoc(doc(db, "schools", id));
+
+    await loadSchools();
+
+    renderSchoolsTable();
+    loadSchoolsForChecklist();
+    renderDashboard();
+
+    alert("Escola excluída com sucesso.");
+  } catch (error) {
+    console.error("Erro ao excluir escola:", error);
+    alert("Não foi possível excluir a escola. Tente novamente.");
+  }
 }
 
 async function loadProfessors() {
@@ -267,31 +380,64 @@ function renderProfessorsTable() {
 }
 
 async function saveProfessor(id) {
-  const name = document.getElementById('profName').value.trim();
-  const email = document.getElementById('profEmail').value.trim();
-  const password = document.getElementById('profPassword').value;
-  
-  const checked = document.querySelectorAll('#profSchoolsChecklist input[type="checkbox"]:checked');
-  const schoolIds = Array.from(checked).map(c => c.value);
+  const name = document.getElementById("profName").value.trim();
+  const email = document.getElementById("profEmail").value.trim().toLowerCase();
+  const password = document.getElementById("profPassword").value;
 
-  if (!name || !email || schoolIds.length === 0) return alert('Preencha nome, e-mail e selecione pelo menos uma escola.');
-  
-  if (!id) {
-    if (!password) return alert('Defina uma senha para o novo professor.');
-    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, returnSecureToken: false })
-    });
-    const data = await res.json();
-    if (!res.ok) return alert('Erro ao criar usuário: ' + (data.error?.message || 'Erro desconhecido'));
-    id = data.localId;
-    await setDoc(doc(db, 'users', id), { email, name, role: 'professor', schoolIds });
-  } else {
-    await updateDoc(doc(db, 'users', id), { name, email, schoolIds });
-    if (password) alert('A senha só pode ser redefinida pelo administrador do Firebase ou pelo professor usando "Esqueci minha senha".');
+  const checked = document.querySelectorAll(
+    '#profSchoolsChecklist input[type="checkbox"]:checked'
+  );
+
+  const schoolIds = Array.from(checked).map((checkbox) => checkbox.value);
+
+  if (!name || !email || schoolIds.length === 0) {
+    return alert("Preencha nome, e-mail e selecione pelo menos uma escola.");
   }
-  await setDoc(doc(db, 'professors', id), { name, email, schoolIds }, { merge: true });
-  closeModal(); await loadProfessors(); renderProfessorsTable(); renderDashboard();
+
+  if (!id && !password) {
+    return alert("Defina uma senha para o novo professor.");
+  }
+
+  try {
+    if (!id) {
+      await createProfessorFunction({
+        name,
+        email,
+        password,
+        schoolIds
+      });
+
+      alert("Professor cadastrado com sucesso.");
+    } else {
+      await updateProfessorFunction({
+        uid: id,
+        name,
+        email,
+        password: password || null,
+        schoolIds
+      });
+
+      alert("Professor atualizado com sucesso.");
+    }
+
+    closeModal();
+
+    await loadProfessors();
+    renderProfessorsTable();
+    renderDashboard();
+  } catch (error) {
+    console.error("Erro ao salvar professor:", error);
+
+    const messages = {
+      "permission-denied": "Você não tem permissão para gerenciar professores.",
+      "already-exists": "Já existe uma conta cadastrada com este e-mail.",
+      "invalid-argument": "Verifique os dados preenchidos.",
+      "not-found": "Professor não encontrado.",
+      "unauthenticated": "Sua sessão expirou. Entre novamente no sistema."
+    };
+
+    alert(messages[error.code] || error.message || "Não foi possível salvar o professor.");
+  }
 }
 
 function openProfessorModal(id) {
@@ -322,25 +468,34 @@ function openProfessorModal(id) {
 }
 
 async function deleteProfessor(id) {
-  if (!confirm('Excluir professor?')) return;
-  await deleteDoc(doc(db, 'professors', id)); await deleteDoc(doc(db, 'users', id));
-  await loadProfessors(); renderProfessorsTable(); renderDashboard();
+  const professor = state.professors.find((item) => item.id === id);
+  const professorName = professor?.name || "este professor";
+
+  if (!confirm(`Excluir ${professorName}?\n\nEsta ação removerá o acesso, a conta de autenticação e o perfil do professor.`)) {
+    return;
+  }
+
+  try {
+    await deleteProfessorFunction({ uid: id });
+
+    await loadProfessors();
+    renderProfessorsTable();
+    renderDashboard();
+
+    alert("Professor excluído com sucesso.");
+  } catch (error) {
+    console.error("Erro ao excluir professor:", error);
+
+    const messages = {
+      "permission-denied": "Você não tem permissão para excluir professores.",
+      "not-found": "Professor não encontrado.",
+      "unauthenticated": "Sua sessão expirou. Entre novamente no sistema."
+    };
+
+    alert(messages[error.code] || error.message || "Não foi possível excluir o professor.");
+  }
 }
 
-async function loadTeams() {
-  const snap = await getDocs(collection(db, 'teams'));
-  state.teams = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
-
-function loadSchoolsForChecklist() {
-  const container = document.getElementById('schoolsChecklist');
-  if (state.schools.length === 0) { container.innerHTML = '<div class="empty">Nenhuma escola cadastrada. Cadastre escolas primeiro.</div>'; return; }
-  container.innerHTML = state.schools.map(s => `
-    <div class="school-check-item">
-      <input type="checkbox" value="${s.id}" id="chk_${s.id}" data-name="${s.name}">
-      <label for="chk_${s.id}">${s.name}</label>
-    </div>`).join('');
-}
 
 function toggleSelectAllSchools() {
   const all = document.getElementById('selectAllSchools').checked;
@@ -1610,18 +1765,61 @@ function toggleSidebar() {
 }
 
 window.app = {
-  login, logout, show,
-  openSchoolModal, saveSchool, deleteSchool,
-  openProfessorModal, saveProfessor, deleteProfessor,
-  toggleSelectAllSchools, createBatchTeams,
-  openTournamentDetail, openEditTournamentModal, saveTournamentName,
-  openManageTeamsModal, saveTournamentTeams, deleteTournament,
-  shuffleTournamentTeams, startTournament,
-  saveInlineResultDE, undoMatchResultDE, executeSaveResult,
-  openTeamSquadModal, addAthleteToSquad, removeAthleteFromSquad, editAthleteFromSquad, 
+  login,
+  logout,
+  show,
+
+  openSchoolModal,
+  saveSchool,
+  deleteSchool,
+  loadTeams,
+  loadSchoolsForChecklist,
+
+  openProfessorModal,
+  saveProfessor,
+  deleteProfessor,
+
+  toggleSelectAllSchools,
+  createBatchTeams,
+
+  openTournamentDetail,
+  openEditTournamentModal,
+  saveTournamentName,
+  openManageTeamsModal,
+  saveTournamentTeams,
+  deleteTournament,
+
+  shuffleTournamentTeams,
+  startTournament,
+
+  saveInlineResultDE,
+  undoMatchResultDE,
+  executeSaveResult,
+
+  openTeamSquadModal,
+  addAthleteToSquad,
+  removeAthleteFromSquad,
+  editAthleteFromSquad,
+
   closeModal,
-  openAthletes, addAthlete, removeAthlete, editAthlete,
-  loadProfTournaments, openProfTournamentDetail, toggleSidebar,
+
+  openAthletes,
+  addAthlete,
+  removeAthlete,
+  editAthlete,
+
+  loadProfTournaments,
+  openProfTournamentDetail,
+
+  toggleSidebar,
   renderGeneralStandings,
-  openSumulaModal, updateSum, finishSumula, toggleTimer, adjustTimer, resetTimer
+
+  openSumulaModal,
+  updateSum,
+  finishSumula,
+  toggleTimer,
+  adjustTimer,
+  resetTimer
+};
+
 };
