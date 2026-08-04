@@ -328,3 +328,7 @@ input.inline-score {
   .athlete-inputs { flex-direction: column; align-items: stretch; gap: 8px; }
   .athlete-inputs input, .athlete-inputs button { width: 100% !important; margin: 0 !important; box-sizing: border-box; }
 }
+.shirt-input.is-dup {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
