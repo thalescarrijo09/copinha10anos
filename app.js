@@ -821,7 +821,7 @@ function isFinalGame(label) { return label === 'Final' || label === 'Final perd.
 
 function renderMatchCardDE(map, m, seeds, results, readOnly, tournamentId) {
   const a = resolveSlot(map, m.s[0], seeds, results);
-  const b = resolveSlot(map, m.s, seeds, results);
+  const b = resolveSlot(map, m.s[1], seeds, results);
   const resultData = results[m.id];
   const winnerIdx = resultData !== undefined ? (typeof resultData === 'object' ? resultData.winner : resultData) : undefined;
   
