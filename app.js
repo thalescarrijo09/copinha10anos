@@ -51,6 +51,34 @@ function formatDateBR(dateStr) {
 }
 
 /* ============================================================
+   HELPERS DA SÚMULA (NÚMERO DE CAMISA POR JOGO)
+   ============================================================ */
+function initAtletaFor(modality) {
+  return () => modality === 'queimada'
+    ? { number: '', burned: false, base: false, returned: false, yellow: 0, red: 0 }
+    : { number: '', goals: 0, yellow: 0, red: 0 };
+}
+
+// Reconcilia um backup salvo com o plantel ATUAL do time.
+// Atleta novo entra zerado; atleta removido desaparece; os demais preservam os dados.
+function mergeSumulaData(athletes, savedData, initAtleta) {
+  const out = {};
+  (athletes || []).forEach((a, i) => {
+    const prev = savedData ? savedData[i] : null;
+    out[i] = (prev && prev._name === a.name) ? prev : initAtleta();
+    out[i]._name = a.name;
+  });
+  return out;
+}
+
+// Somente atletas com número de camisa preenchido são considerados escalados.
+function escaladosDaSumula(data) {
+  return Object.entries(data || {})
+    .filter(([, v]) => String(v.number || '').trim() !== '')
+    .map(([idx, v]) => ({ idx: Number(idx), ...v }));
+}
+
+/* ============================================================
    ÁUDIO SINTETIZADO (Alertas Sonoros)
    ============================================================ */
 let audioCtx = null;
@@ -1125,19 +1153,24 @@ function openSumulaModal(tournamentId, matchId) {
   const teamA = state.teams.find(x => x.id === slotA.teamId);
   const teamB = state.teams.find(x => x.id === slotB.teamId);
 
+  const isQueimada = t.modality === 'queimada';
+  const initAtleta = initAtletaFor(t.modality);
+
   const backupStr = localStorage.getItem('sumulaBackup_' + matchId);
   if (backupStr) {
     if (confirm('Foi encontrada uma súmula em andamento salva no seu dispositivo para este jogo.\n\nDeseja restaurá-la de onde parou?')) {
       const backup = JSON.parse(backupStr);
-      const isOldFormat = Object.keys(backup.dataA).some(k => isNaN(k));
+      const isOldFormat = Object.keys(backup.dataA || {}).some(k => isNaN(k));
       if (isOldFormat) {
           alert('A versão da súmula salva é incompatível com a nova atualização. Uma nova súmula será iniciada.');
           localStorage.removeItem('sumulaBackup_' + matchId);
       } else {
+          // Reconcilia com o plantel atual: atleta novo entra, atleta removido sai.
           state.currentSumula = {
             tournamentId, matchId, modality: t.modality,
             teamA, teamB, 
-            dataA: backup.dataA, dataB: backup.dataB,
+            dataA: mergeSumulaData(teamA.athletes, backup.dataA, initAtleta),
+            dataB: mergeSumulaData(teamB.athletes, backup.dataB, initAtleta),
             scoreA: backup.scoreA, scoreB: backup.scoreB,
             faltantesA: backup.faltantesA, faltantesB: backup.faltantesB,
             timer: { totalSeconds: backup.timer.totalSeconds, isRunning: false, interval: null }
@@ -1157,11 +1190,14 @@ function openSumulaModal(tournamentId, matchId) {
     timer: { totalSeconds: 15 * 60, isRunning: false, interval: null }
   };
 
-  const isQueimada = t.modality === 'queimada';
-  const initAtleta = () => isQueimada ? { number: '', burned: false, base: false, returned: false, yellow: 0, red: 0 } : { number: '', goals: 0, yellow: 0, red: 0 };
-  
-  (teamA.athletes || []).forEach((a, i) => state.currentSumula.dataA[i] = initAtleta());
-  (teamB.athletes || []).forEach((b, i) => state.currentSumula.dataB[i] = initAtleta());
+  (teamA.athletes || []).forEach((a, i) => {
+    state.currentSumula.dataA[i] = initAtleta();
+    state.currentSumula.dataA[i]._name = a.name;
+  });
+  (teamB.athletes || []).forEach((b, i) => {
+    state.currentSumula.dataB[i] = initAtleta();
+    state.currentSumula.dataB[i]._name = b.name;
+  });
 
   if (isQueimada) {
     const faltantesA = Math.max(0, 12 - (teamA.athletes || []).length);
@@ -1178,8 +1214,24 @@ function openSumulaModal(tournamentId, matchId) {
 function updateSumNumber(teamStr, athIdx, val) {
   const s = state.currentSumula;
   if (!s || !s[teamStr] || !s[teamStr][athIdx]) return;
-  s[teamStr][athIdx].number = val ? parseInt(val) : '';
+  // Guarda como texto para preservar zeros à esquerda (ex.: "07")
+  s[teamStr][athIdx].number = String(val || '').replace(/\D/g, '').slice(0, 3);
   saveSumulaLocal();
+  refreshDupHighlight(teamStr);
+}
+
+// Marca em vermelho os números repetidos dentro da mesma equipe (apenas aviso visual)
+function refreshDupHighlight(teamStr) {
+  const s = state.currentSumula;
+  if (!s || !s[teamStr]) return;
+  const nums = Object.values(s[teamStr]).map(v => String(v.number || '').trim()).filter(Boolean);
+  const dup = new Set(nums.filter((n, i) => nums.indexOf(n) !== i));
+  const side = teamStr === 'dataA' ? 'A' : 'B';
+  document.querySelectorAll(`.sum-number[data-side="${side}"]`).forEach(inp => {
+    const v = String(inp.value || '').trim();
+    inp.classList.toggle('is-dup', v !== '' && dup.has(v));
+    inp.title = (v !== '' && dup.has(v)) ? '⚠️ Número repetido nesta equipe' : 'Número da camisa neste jogo';
+  });
 }
 
 function calcSumulaScore() {
@@ -1250,6 +1302,7 @@ function renderSumulaModal() {
   calcSumulaScore();
 
   const buildRows = (team, dataObj, teamStr) => {
+    const side = teamStr === 'dataA' ? 'A' : 'B';
     return (team.athletes || [])
       .map((a, i) => ({ ...a, _origIdx: i })) 
       .sort((x, y) => {
@@ -1264,6 +1317,17 @@ function renderSumulaModal() {
       .map(a => {
         const d = dataObj[a._origIdx];
         if (!d) return ''; 
+
+        const numberCell = `
+            <td style="text-align:center;">
+              <input type="text" inputmode="numeric" maxlength="3"
+                     class="sum-number" data-side="${side}"
+                     style="width:42px; text-align:center; padding:2px; font-weight:bold; border:1px solid #ccc; border-radius:4px;" 
+                     value="${escapeHTML(d.number || '')}" placeholder="Nº" 
+                     title="Número da camisa neste jogo"
+                     oninput="app.updateSumNumber('${teamStr}', ${a._origIdx}, this.value)">
+            </td>`;
+
         if (isQ) {
           let returnHtml = '';
           if (d.base) {
@@ -1276,11 +1340,7 @@ function renderSumulaModal() {
           const baseBtnContent = d.base ? '👑' : '';
 
           return `<tr>
-            <td style="text-align:center;">
-              <input type="number" style="width:42px; text-align:center; padding:2px; font-weight:bold; border:1px solid #ccc; border-radius:4px;" 
-                     value="${d.number || ''}" placeholder="Nº" 
-                     onchange="app.updateSumNumber('${teamStr}', ${a._origIdx}, this.value)">
-            </td>
+            ${numberCell}
             <td style="${d.burned ? 'text-decoration:line-through; color:#aaa;' : ''}">
               ${escapeHTML(a.name)} ${returnHtml}
             </td>
@@ -1292,11 +1352,7 @@ function renderSumulaModal() {
           </tr>`;
         } else {
           return `<tr>
-            <td style="text-align:center;">
-              <input type="number" style="width:42px; text-align:center; padding:2px; font-weight:bold; border:1px solid #ccc; border-radius:4px;" 
-                     value="${d.number || ''}" placeholder="Nº" 
-                     onchange="app.updateSumNumber('${teamStr}', ${a._origIdx}, this.value)">
-            </td>
+            ${numberCell}
             <td>${escapeHTML(a.name)}</td>
             <td style="text-align:center; white-space:nowrap;">
               <button class="action-btn" onclick="app.updateSum('${teamStr}', ${a._origIdx}, 'goals', false)">-</button>
@@ -1336,6 +1392,10 @@ function renderSumulaModal() {
 
     </div>
 
+    <p class="small" style="text-align:center; color:#666; margin:0 0 10px;">
+      Preencha o <b>número da camisa</b> apenas dos atletas escalados neste jogo. Quem ficar sem número não entra na súmula oficial.
+    </p>
+
     <div class="sumula-container">
       <div class="sumula-team team-a">
         <h4>${escapeHTML(s.teamA.name)}</h4>
@@ -1369,6 +1429,8 @@ function renderSumulaModal() {
   `;
 
   openModal(html, true); 
+  refreshDupHighlight('dataA');
+  refreshDupHighlight('dataB');
 }
 
 async function finishSumula() {
@@ -1378,9 +1440,21 @@ async function finishSumula() {
   if (s.scoreA === s.scoreB) {
     return alert('Não pode haver empates nas eliminatórias. Assinale o ponto de desempate antes de fechar a súmula.');
   }
+
+  // Somente atletas com número de camisa entram na súmula oficial
+  const escaladosA = escaladosDaSumula(s.dataA);
+  const escaladosB = escaladosDaSumula(s.dataB);
+
+  if (escaladosA.length === 0 && escaladosB.length === 0) {
+    return alert('Nenhum atleta foi escalado. Informe o número da camisa de quem participou do jogo.');
+  }
+  if (escaladosA.length === 0 || escaladosB.length === 0) {
+    const semTime = escaladosA.length === 0 ? s.teamA.name : s.teamB.name;
+    if (!confirm(`A equipe "${semTime}" está sem nenhum atleta com número de camisa.\n\nSalvar a súmula assim mesmo?`)) return;
+  }
   
   const winnerIdx = s.scoreA > s.scoreB ? 0 : 1;
-  const detailsObj = { dataA: s.dataA, dataB: s.dataB };
+  const detailsObj = { dataA: escaladosA, dataB: escaladosB };
   
   await executeSaveResult(s.tournamentId, s.matchId, s.scoreA, s.scoreB, winnerIdx, detailsObj);
   
@@ -1413,7 +1487,7 @@ function calculateStandings(tournament) {
     if (!res) return null;
     const m = matchById(map, matchId);
     const a = resolveSlot(map, m.s[0], seeds, results);
-    const b = resolveSlot(map, m.s, seeds, results);
+    const b = resolveSlot(map, m.s[1], seeds, results);
     const wIdx = typeof res === 'object' ? res.winner : res;
     return wIdx === 0 ? a.teamId : b.teamId;
   };
@@ -1548,18 +1622,15 @@ function renderGeneralStandings() {
   });
 
   const sortedSchools = Object.values(schoolStats).sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;             
-    if (b.places !== a.places) return b.places - a.places; 
-    if (b.places !== a.places) return b.places - a.places; 
-    if (b.places !== a.places) return b.places - a.places; 
-    if (b.places !== a.places) return b.places - a.places; 
-    if (b.places !== a.places) return b.places - a.places; 
-    if (b.places[6] !== a.places[6]) return b.places[6] - a.places[6]; 
+    if (b.points !== a.points) return b.points - a.points;
+    for (let p = 1; p <= 6; p++) {
+      if (b.places[p] !== a.places[p]) return b.places[p] - a.places[p];
+    }
     return a.name.localeCompare(b.name); 
   });
 
   if (sortedSchools.length === 0) {
-    tbody.innerHTML = '<tr><td colspan=\"4\" class=\"empty\">Nenhuma escola cadastrada ou torneios finalizados.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">Nenhuma escola cadastrada ou torneios finalizados.</td></tr>';
     return;
   }
 
@@ -1571,11 +1642,11 @@ function renderGeneralStandings() {
     else if (index === 2 && s.points > 0) { medal = '🥉 '; }
     
     return `<tr>
-      <td style=\"font-weight:bold; text-align:center; ${extraStyle}\">${index + 1}º</td>
-      <td style=\"${extraStyle}\">${medal}${escapeHTML(s.name)}</td>
-      <td style=\"font-weight:900; color:var(--primary); text-align:center; font-size:1.1rem;\">${s.points} pts</td>
-      <td class=\"small\" style=\"text-align:center; color:#666;\">
-        ${s.places} 🥇 | ${s.places} 🥈 | ${s.places} 🥉
+      <td style="font-weight:bold; text-align:center; ${extraStyle}">${index + 1}º</td>
+      <td style="${extraStyle}">${medal}${escapeHTML(s.name)}</td>
+      <td style="font-weight:900; color:var(--primary); text-align:center; font-size:1.1rem;">${s.points} pts</td>
+      <td class="small" style="text-align:center; color:#666;">
+        ${s.places[1]} 🥇 | ${s.places[2]} 🥈 | ${s.places[3]} 🥉
       </td>
     </tr>`;
   }).join('');
@@ -1757,6 +1828,6 @@ window.app = {
   loadProfTournaments, openProfTournamentDetail, toggleSidebar,
   renderGeneralStandings,
   openSumulaModal, updateSum, finishSumula, toggleTimer, adjustTimer, resetTimer,
-  updateSumNumber,
+  updateSumNumber, refreshDupHighlight,
   migrateProfessorsToUsers
 };
