@@ -230,12 +230,18 @@
           <p class="small mb" id="athTeamInfo"></p>
           <div class="flex mb athlete-inputs">
             <input type="text" id="athleteName" placeholder="Nome do atleta">
-            <input type="number" id="athleteNumber" placeholder="Nº">
+            <input type="date" id="athleteBirthDate" title="Data de Nascimento">
             <button onclick="app.addAthlete()">Adicionar</button>
           </div>
           <div class="table-responsive">
             <table>
-              <thead><tr><th>Nº</th><th>Nome</th><th>Ações</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>NOME</th>
+                  <th style="text-align:center;">DATA DE NASCIMENTO</th>
+                  <th style="text-align:center;">AÇÕES</th>
+                </tr>
+              </thead>
               <tbody id="athletesTable"></tbody>
             </table>
           </div>
