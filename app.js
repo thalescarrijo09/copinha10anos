@@ -46,7 +46,7 @@ function escapeHTML(str) {
 function formatDateBR(dateStr) {
   if (!dateStr) return '-';
   const parts = dateStr.split('-');
-  if (parts.length === 3) return `${parts}/${parts}/${parts[0]}`;
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
   return dateStr;
 }
 
@@ -995,8 +995,9 @@ async function executeSaveResult(tournamentId, jogoId, scoreA, scoreB, winnerIdx
   t.results = results;
 
   const map = MAPS[t.bracketSize];
-  const finalGame = matchById(map, MAPS[t.bracketSize].winners.flat().find(g => g.label === 'Final').id);
-  const newStatus = results[finalGame.id] !== undefined ? 'finished' : 'active';
+  const finalGame = map ? map.winners.flat().find(g => g.label === 'Final') : null;
+  const newStatus = (finalGame && results[finalGame.id] !== undefined) ? 'finished' : 'active';
+
 
   await updateDoc(doc(db, 'tournaments', tournamentId), {
     results, status: newStatus, updatedAt: new Date().toISOString()
@@ -1117,7 +1118,7 @@ function openSumulaModal(tournamentId, matchId) {
   const map = MAPS[t.bracketSize];
   const match = matchById(map, matchId);
   const slotA = resolveSlot(map, match.s[0], t.seeds, t.results || {});
-  const slotB = resolveSlot(map, match.s, t.seeds, t.results || {});
+  const slotB = resolveSlot(map, match.s[1], t.seeds, t.results || {});
   
   if (!slotA.decided || !slotB.decided) return alert('As equipes ainda não estão definidas para este jogo.');
 
@@ -1402,7 +1403,7 @@ function calculateStandings(tournament) {
     if (!res) return null;
     const m = matchById(map, matchId);
     const a = resolveSlot(map, m.s[0], seeds, results);
-    const b = resolveSlot(map, m.s, seeds, results);
+    const b = resolveSlot(map, m.s[1], seeds, results);
     const wIdx = typeof res === 'object' ? res.winner : res;
     return wIdx === 0 ? b.teamId : a.teamId;
   };
