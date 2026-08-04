@@ -31,7 +31,7 @@ const CATEGORY_LABELS = { sub09: 'Sub-09', sub11: 'Sub-11' };
 const GENDER_LABELS = { masculino: 'Masculino', feminino: 'Feminino' };
 
 /* ============================================================
-   BLINDAGEM DE SEGURANÇA (SANITIZAÇÃO XSS)
+   BLINDAGEM DE SEGURANÇA (SANITIZAÇÃO XSS) & FORMATADORES
    ============================================================ */
 function escapeHTML(str) {
   if (!str && str !== 0) return '';
@@ -41,6 +41,13 @@ function escapeHTML(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function formatDateBR(dateStr) {
+  if (!dateStr) return '-';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) return `${parts}/${parts}/${parts[0]}`;
+  return dateStr;
 }
 
 /* ============================================================
@@ -642,7 +649,7 @@ async function openTeamSquadModal(teamId) {
     html += `
       <div class="athlete-inputs mt mb">
         <input type="text" id="squadAthleteName" placeholder="Nome do atleta">
-        <input type="number" id="squadAthleteNumber" placeholder="Nº">
+        <input type="date" id="squadAthleteBirthDate" title="Data de Nascimento">
         <button class="accent" onclick="app.addAthleteToSquad('${team.id}')">Adicionar</button>
       </div>
     `;
@@ -653,7 +660,7 @@ async function openTeamSquadModal(teamId) {
   html += `
     <div class="table-responsive mt">
       <table>
-        <thead><tr><th style="width: 50px; text-align:center;">Nº</th><th>Nome do Atleta</th>${isEditable ? '<th style="text-align:center;">Ações</th>' : ''}</tr></thead>
+        <thead><tr><th>Nome do Atleta</th><th style="text-align:center;">Data de Nascimento</th>${isEditable ? '<th style="text-align:center;">Ações</th>' : ''}</tr></thead>
         <tbody id="squadAthletesTable"></tbody>
       </table>
     </div>
@@ -674,13 +681,13 @@ function renderSquadTable(team, isEditable) {
 
   tbody.innerHTML = athletes
     .map((a, i) => ({ ...a, _idx: i }))
-    .sort((x, y) => (x.number || 0) - (y.number || 0))
+    .sort((x, y) => x.name.localeCompare(y.name))
     .map(a => `
       <tr>
-        <td style="text-align:center; font-weight:bold;">${a.number ?? '-'}</td>
         <td>${escapeHTML(a.name)}</td>
+        <td style="text-align:center;">${formatDateBR(a.birthDate)}</td>
         ${isEditable ? `<td style="text-align:center; white-space:nowrap;">
-          <button class="secondary small-btn" style="padding:4px 8px; margin:2px;" onclick="app.editAthleteFromSquad('${team.id}', ${a._idx})" title="Editar Nº">✏️</button>
+          <button class="secondary small-btn" style="padding:4px 8px; margin:2px;" onclick="app.editAthleteFromSquad('${team.id}', ${a._idx})" title="Editar">✏️</button>
           <button class="danger small-btn" style="padding:4px 8px; margin:2px;" onclick="app.removeAthleteFromSquad('${team.id}', ${a._idx})" title="Excluir">🗑️</button>
         </td>` : ''}
       </tr>`).join('');
@@ -691,12 +698,14 @@ async function editAthleteFromSquad(teamId, idx) {
   if (!team || team.id !== teamId) return;
   const athlete = team.athletes[idx];
   
-  const newNumberStr = prompt(`Digite o novo número para o(a) atleta ${athlete.name}:`, athlete.number || '');
-  if (newNumberStr === null) return; 
-  
-  const newNumber = newNumberStr.trim() === '' ? null : parseInt(newNumberStr);
+  const newName = prompt(`Nome do atleta:`, athlete.name || '');
+  if (newName === null) return;
+  const newBirth = prompt(`Data de nascimento (AAAA-MM-DD):`, athlete.birthDate || '');
+  if (newBirth === null) return;
+
   const athletes = [...team.athletes];
-  athletes[idx].number = newNumber;
+  athletes[idx].name = newName.trim() || athlete.name;
+  athletes[idx].birthDate = newBirth.trim();
   
   await updateDoc(doc(db, 'teams', teamId), { athletes });
   team.athletes = athletes;
@@ -716,14 +725,14 @@ async function editAthleteFromSquad(teamId, idx) {
 
 async function addAthleteToSquad(teamId) {
   const name = document.getElementById('squadAthleteName').value.trim();
-  const number = document.getElementById('squadAthleteNumber').value;
+  const birthDate = document.getElementById('squadAthleteBirthDate').value;
   if (!name) return alert('Informe o nome do atleta.');
 
   const team = state.currentSquadTeam;
   if (!team || team.id !== teamId) return;
 
   const athletes = team.athletes ? [...team.athletes] : [];
-  athletes.push({ name, number: number ? parseInt(number) : null });
+  athletes.push({ name, birthDate: birthDate || '' });
 
   await updateDoc(doc(db, 'teams', teamId), { athletes });
   team.athletes = athletes;
@@ -734,7 +743,7 @@ async function addAthleteToSquad(teamId) {
   if(ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
 
   document.getElementById('squadAthleteName').value = '';
-  document.getElementById('squadAthleteNumber').value = '';
+  document.getElementById('squadAthleteBirthDate').value = '';
   renderSquadTable(team, true);
 
   if (state.currentTeam && state.currentTeam.id === teamId) {
@@ -812,7 +821,7 @@ function isFinalGame(label) { return label === 'Final' || label === 'Final perd.
 
 function renderMatchCardDE(map, m, seeds, results, readOnly, tournamentId) {
   const a = resolveSlot(map, m.s[0], seeds, results);
-  const b = resolveSlot(map, m.s[1], seeds, results);
+  const b = resolveSlot(map, m.s, seeds, results);
   const resultData = results[m.id];
   const winnerIdx = resultData !== undefined ? (typeof resultData === 'object' ? resultData.winner : resultData) : undefined;
   
@@ -1108,7 +1117,7 @@ function openSumulaModal(tournamentId, matchId) {
   const map = MAPS[t.bracketSize];
   const match = matchById(map, matchId);
   const slotA = resolveSlot(map, match.s[0], t.seeds, t.results || {});
-  const slotB = resolveSlot(map, match.s[1], t.seeds, t.results || {});
+  const slotB = resolveSlot(map, match.s, t.seeds, t.results || {});
   
   if (!slotA.decided || !slotB.decided) return alert('As equipes ainda não estão definidas para este jogo.');
 
@@ -1148,7 +1157,7 @@ function openSumulaModal(tournamentId, matchId) {
   };
 
   const isQueimada = t.modality === 'queimada';
-  const initAtleta = () => isQueimada ? { burned: false, base: false, returned: false, yellow: 0, red: 0 } : { goals: 0, yellow: 0, red: 0 };
+  const initAtleta = () => isQueimada ? { number: '', burned: false, base: false, returned: false, yellow: 0, red: 0 } : { number: '', goals: 0, yellow: 0, red: 0 };
   
   (teamA.athletes || []).forEach((a, i) => state.currentSumula.dataA[i] = initAtleta());
   (teamB.athletes || []).forEach((b, i) => state.currentSumula.dataB[i] = initAtleta());
@@ -1163,6 +1172,13 @@ function openSumulaModal(tournamentId, matchId) {
   }
 
   renderSumulaModal();
+}
+
+function updateSumNumber(teamStr, athIdx, val) {
+  const s = state.currentSumula;
+  if (!s || !s[teamStr] || !s[teamStr][athIdx]) return;
+  s[teamStr][athIdx].number = val ? parseInt(val) : '';
+  saveSumulaLocal();
 }
 
 function calcSumulaScore() {
@@ -1238,11 +1254,11 @@ function renderSumulaModal() {
       .sort((x, y) => {
         const dx = dataObj[x._origIdx];
         const dy = dataObj[y._origIdx];
-        if (dx && dy) {
+        if (dx && dy && isQ) {
             if (dx.base && !dy.base) return 1;
             if (!dx.base && dy.base) return -1;
         }
-        return (x.number || 0) - (y.number || 0);
+        return x.name.localeCompare(y.name);
       })
       .map(a => {
         const d = dataObj[a._origIdx];
@@ -1259,7 +1275,11 @@ function renderSumulaModal() {
           const baseBtnContent = d.base ? '👑' : '';
 
           return `<tr>
-            <td style="text-align:center; font-weight:bold;">${a.number||'-'}</td>
+            <td style="text-align:center;">
+              <input type="number" style="width:42px; text-align:center; padding:2px; font-weight:bold; border:1px solid #ccc; border-radius:4px;" 
+                     value="${d.number || ''}" placeholder="Nº" 
+                     onchange="app.updateSumNumber('${teamStr}', ${a._origIdx}, this.value)">
+            </td>
             <td style="${d.burned ? 'text-decoration:line-through; color:#aaa;' : ''}">
               ${escapeHTML(a.name)} ${returnHtml}
             </td>
@@ -1271,7 +1291,11 @@ function renderSumulaModal() {
           </tr>`;
         } else {
           return `<tr>
-            <td style="text-align:center; font-weight:bold;">${a.number||'-'}</td>
+            <td style="text-align:center;">
+              <input type="number" style="width:42px; text-align:center; padding:2px; font-weight:bold; border:1px solid #ccc; border-radius:4px;" 
+                     value="${d.number || ''}" placeholder="Nº" 
+                     onchange="app.updateSumNumber('${teamStr}', ${a._origIdx}, this.value)">
+            </td>
             <td>${escapeHTML(a.name)}</td>
             <td style="text-align:center; white-space:nowrap;">
               <button class="action-btn" onclick="app.updateSum('${teamStr}', ${a._origIdx}, 'goals', false)">-</button>
@@ -1317,7 +1341,7 @@ function renderSumulaModal() {
         <div class="sumula-table-wrapper">
           <table class="sumula-table">
             <thead>
-              <tr><th style="width:30px;">Nº</th><th>Atleta</th>${isQ ? '<th style="text-align:center; width:50px;">Base</th><th style="text-align:center; width:50px;">Queim.</th><th style="text-align:center; width:50px;">Cartão</th>' : '<th style="text-align:center; width:100px;">Golos</th><th style="text-align:center; width:90px;">Cartões</th>'}</tr>
+              <tr><th style="width:50px;">Nº</th><th>Atleta</th>${isQ ? '<th style="text-align:center; width:50px;">Base</th><th style="text-align:center; width:50px;">Queim.</th><th style="text-align:center; width:50px;">Cartão</th>' : '<th style="text-align:center; width:100px;">Golos</th><th style="text-align:center; width:90px;">Cartões</th>'}</tr>
             </thead>
             <tbody>${buildRows(s.teamA, s.dataA, 'dataA')}</tbody>
           </table>
@@ -1329,7 +1353,7 @@ function renderSumulaModal() {
         <div class="sumula-table-wrapper">
           <table class="sumula-table">
             <thead>
-              <tr><th style="width:30px;">Nº</th><th>Atleta</th>${isQ ? '<th style="text-align:center; width:50px;">Base</th><th style="text-align:center; width:50px;">Queim.</th><th style="text-align:center; width:50px;">Cartão</th>' : '<th style="text-align:center; width:100px;">Golos</th><th style="text-align:center; width:90px;">Cartões</th>'}</tr>
+              <tr><th style="width:50px;">Nº</th><th>Atleta</th>${isQ ? '<th style="text-align:center; width:50px;">Base</th><th style="text-align:center; width:50px;">Queim.</th><th style="text-align:center; width:50px;">Cartão</th>' : '<th style="text-align:center; width:100px;">Golos</th><th style="text-align:center; width:90px;">Cartões</th>'}</tr>
             </thead>
             <tbody>${buildRows(s.teamB, s.dataB, 'dataB')}</tbody>
           </table>
@@ -1378,7 +1402,7 @@ function calculateStandings(tournament) {
     if (!res) return null;
     const m = matchById(map, matchId);
     const a = resolveSlot(map, m.s[0], seeds, results);
-    const b = resolveSlot(map, m.s[1], seeds, results);
+    const b = resolveSlot(map, m.s, seeds, results);
     const wIdx = typeof res === 'object' ? res.winner : res;
     return wIdx === 0 ? b.teamId : a.teamId;
   };
@@ -1388,7 +1412,7 @@ function calculateStandings(tournament) {
     if (!res) return null;
     const m = matchById(map, matchId);
     const a = resolveSlot(map, m.s[0], seeds, results);
-    const b = resolveSlot(map, m.s[1], seeds, results);
+    const b = resolveSlot(map, m.s, seeds, results);
     const wIdx = typeof res === 'object' ? res.winner : res;
     return wIdx === 0 ? a.teamId : b.teamId;
   };
@@ -1524,11 +1548,11 @@ function renderGeneralStandings() {
 
   const sortedSchools = Object.values(schoolStats).sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;             
-    if (b.places[1] !== a.places[1]) return b.places[1] - a.places[1]; 
-    if (b.places[2] !== a.places[2]) return b.places[2] - a.places[2]; 
-    if (b.places[3] !== a.places[3]) return b.places[3] - a.places[3]; 
-    if (b.places[4] !== a.places[4]) return b.places[4] - a.places[4]; 
-    if (b.places[5] !== a.places[5]) return b.places[5] - a.places[5]; 
+    if (b.places !== a.places) return b.places - a.places; 
+    if (b.places !== a.places) return b.places - a.places; 
+    if (b.places !== a.places) return b.places - a.places; 
+    if (b.places !== a.places) return b.places - a.places; 
+    if (b.places !== a.places) return b.places - a.places; 
     if (b.places[6] !== a.places[6]) return b.places[6] - a.places[6]; 
     return a.name.localeCompare(b.name); 
   });
@@ -1550,7 +1574,7 @@ function renderGeneralStandings() {
       <td style=\"${extraStyle}\">${medal}${escapeHTML(s.name)}</td>
       <td style=\"font-weight:900; color:var(--primary); text-align:center; font-size:1.1rem;\">${s.points} pts</td>
       <td class=\"small\" style=\"text-align:center; color:#666;\">
-        ${s.places[1]} 🥇 | ${s.places[2]} 🥈 | ${s.places[3]} 🥉
+        ${s.places} 🥇 | ${s.places} 🥈 | ${s.places} 🥉
       </td>
     </tr>`;
   }).join('');
@@ -1611,13 +1635,13 @@ function renderAthletes() {
   if (athletes.length === 0) { tbody.innerHTML = '<tr><td colspan="3" class="empty">Nenhum atleta registado.</td></tr>'; return; }
   tbody.innerHTML = athletes
     .map((a, i) => ({ ...a, _idx: i }))
-    .sort((x, y) => (x.number || 0) - (y.number || 0))
+    .sort((x, y) => x.name.localeCompare(y.name))
     .map(a => `
       <tr>
-        <td style="text-align:center; font-weight:bold;">${a.number ?? '-'}</td>
         <td>${escapeHTML(a.name)}</td>
+        <td style="text-align:center;">${formatDateBR(a.birthDate)}</td>
         <td style="text-align:center; white-space:nowrap;">
-          <button class="secondary small-btn" onclick="app.editAthlete(${a._idx})" title="Editar Nº">✏️</button>
+          <button class="secondary small-btn" onclick="app.editAthlete(${a._idx})" title="Editar">✏️</button>
           <button class="danger small-btn" onclick="app.removeAthlete(${a._idx})" title="Excluir">🗑️</button>
         </td>
       </tr>`).join('');
@@ -1628,12 +1652,14 @@ async function editAthlete(idx) {
   if (!team) return;
   const athlete = team.athletes[idx];
   
-  const newNumberStr = prompt(`Digite o novo número para o(a) atleta ${athlete.name}:`, athlete.number || '');
-  if (newNumberStr === null) return; 
+  const newName = prompt(`Nome do atleta:`, athlete.name || '');
+  if (newName === null) return; 
+  const newBirth = prompt(`Data de nascimento (AAAA-MM-DD):`, athlete.birthDate || '');
+  if (newBirth === null) return; 
   
-  const newNumber = newNumberStr.trim() === '' ? null : parseInt(newNumberStr);
   const athletes = [...team.athletes];
-  athletes[idx].number = newNumber;
+  athletes[idx].name = newName.trim() || athlete.name;
+  athletes[idx].birthDate = newBirth.trim();
   
   await updateDoc(doc(db, 'teams', team.id), { athletes });
   team.athletes = athletes;
@@ -1648,16 +1674,16 @@ async function editAthlete(idx) {
 
 async function addAthlete() {
   const name = document.getElementById('athleteName').value.trim();
-  const number = document.getElementById('athleteNumber').value;
+  const birthDate = document.getElementById('athleteBirthDate').value;
   if (!name) return alert('Informe o nome do atleta.');
   const team = state.currentTeam;
   if (!team) return;
   const athletes = team.athletes ? [...team.athletes] : [];
-  athletes.push({ name, number: number ? parseInt(number) : null });
+  athletes.push({ name, birthDate: birthDate || '' });
   await updateDoc(doc(db, 'teams', team.id), { athletes });
   team.athletes = athletes;
   document.getElementById('athleteName').value = '';
-  document.getElementById('athleteNumber').value = '';
+  document.getElementById('athleteBirthDate').value = '';
   renderAthletes();
 }
 
@@ -1730,5 +1756,6 @@ window.app = {
   loadProfTournaments, openProfTournamentDetail, toggleSidebar,
   renderGeneralStandings,
   openSumulaModal, updateSum, finishSumula, toggleTimer, adjustTimer, resetTimer,
+  updateSumNumber,
   migrateProfessorsToUsers
 };
