@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>11ª Copa das Escolas Municipais</title>
-  <link rel="stylesheet" href="style.css?v=104">
+  <link rel="stylesheet" href="style.css?v=105">
 </head>
 <body>
 
@@ -21,7 +21,7 @@
   </div>
 
   <div id="appView" class="app-shell">
-    
+
     <div class="sidebar-overlay" onclick="app.toggleSidebar()"></div>
 
     <div class="sidebar">
@@ -46,7 +46,7 @@
     </div>
 
     <div class="main-content">
-      
+
       <div class="mobile-header">
         <button class="menu-btn" onclick="app.toggleSidebar()">☰ Menu</button>
         <span class="mobile-title">11ª Copa</span>
@@ -172,7 +172,7 @@
             <button class="secondary" onclick="app.shuffleTournamentTeams()">🔀 Embaralhar Ordem</button>
             <button class="accent" onclick="app.startTournament()">▶ Iniciar</button>
           </div>
-          
+
           <div id="tdStandings" class="mt hidden"></div>
 
           <div class="mt">
@@ -189,7 +189,7 @@
             <button onclick="app.renderGeneralStandings()">Atualizar Tabela</button>
           </div>
           <p class="small mb">Pontuação cumulativa com base na classificação final das equipes nos torneios (Art. 33º e 34º).</p>
-          
+
           <div class="table-responsive mt">
             <table>
               <thead>
@@ -204,7 +204,7 @@
                 </tbody>
             </table>
           </div>
-          
+
           <div class="mt" style="background: #f9f9f9; padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent);">
             <h4 style="font-size: 0.9rem; margin-bottom: 8px; color: #555;">Regras de Pontuação:</h4>
             <p class="small" style="margin-bottom: 4px;"><strong>1º Lugar:</strong> 10 pts | <strong>2º Lugar:</strong> 7 pts | <strong>3º Lugar:</strong> 4 pts</p>
@@ -229,14 +229,17 @@
           </div>
           <p class="small mb" id="athTeamInfo"></p>
           <div class="flex mb athlete-inputs">
+            <input type="text" id="athleteShirt" placeholder="Nº" maxlength="3" inputmode="numeric" title="Número da camisa (padrão)" style="max-width:70px; text-align:center;">
             <input type="text" id="athleteName" placeholder="Nome do atleta">
             <input type="date" id="athleteBirthDate" title="Data de Nascimento">
             <button onclick="app.addAthlete()">Adicionar</button>
           </div>
+          <p class="small mb" style="color:#666;">O número informado aqui é o <b>padrão do plantel</b> e será carregado automaticamente na súmula (podendo ser alterado apenas para aquele jogo).</p>
           <div class="table-responsive">
             <table>
               <thead>
                 <tr>
+                  <th style="text-align:center; width:60px;">Nº</th>
                   <th>NOME</th>
                   <th style="text-align:center;">DATA DE NASCIMENTO</th>
                   <th style="text-align:center;">AÇÕES</th>
@@ -264,7 +267,7 @@
             </div>
             <button onclick="app.show('profTournaments')">Voltar</button>
           </div>
-          
+
           <div id="ptdStandings" class="mt hidden"></div>
 
           <div class="bracket-wrapper" id="ptdBracket"></div>
