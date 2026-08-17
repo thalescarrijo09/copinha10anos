@@ -670,7 +670,7 @@ async function openTeamSquadModal(teamId) {
       <h3 style="margin:0; font-size:1.1rem;">📋 Plantel <span style="font-size:0.9rem; font-weight:normal; color:#666;">(${escapeHTML(team.name)})</span></h3>
       <button class="close-btn" onclick="app.closeModal()">×</button>
     </div>`;
-  
+
   html += `<p class="small mb"><span class="badge ${team.modality}">${MODALITY_LABELS[team.modality]}</span> <span class="badge ${team.category}">${CATEGORY_LABELS[team.category]}</span> <span class="badge ${team.gender}">${GENDER_LABELS[team.gender]}</span></p>`;
 
   if (isEditable) {
@@ -678,8 +678,10 @@ async function openTeamSquadModal(teamId) {
       <div class="athlete-inputs mt mb">
         <input type="text" id="squadAthleteName" placeholder="Nome do atleta">
         <input type="date" id="squadAthleteBirthDate" title="Data de Nascimento">
+        <input type="text" id="squadAthleteShirt" placeholder="Nº" maxlength="3" style="max-width:70px; text-align:center;" title="Número da camisa (padrão)">
         <button class="accent" onclick="app.addAthleteToSquad('${team.id}')">Adicionar</button>
       </div>
+      <p class="small mb" style="color:#666;">O número da camisa definido aqui é o <strong>padrão</strong> e será pré-preenchido na súmula (podendo ser alterado em cada partida).</p>
     `;
   } else {
     html += `<p class="small mb mt" style="color:var(--primary); font-weight:500;">Visualização de Plantel (Apenas leitura)</p>`;
@@ -688,7 +690,7 @@ async function openTeamSquadModal(teamId) {
   html += `
     <div class="table-responsive mt">
       <table>
-        <thead><tr><th>Nome do Atleta</th><th style="text-align:center;">Data de Nascimento</th>${isEditable ? '<th style="text-align:center;">Ações</th>' : ''}</tr></thead>
+        <thead><tr><th style="text-align:center; width:60px;">Nº</th><th>Nome do Atleta</th><th style="text-align:center;">Data de Nascimento</th>${isEditable ? '<th style="text-align:center;">Ações</th>' : ''}</tr></thead>
         <tbody id="squadAthletesTable"></tbody>
       </table>
     </div>
@@ -702,16 +704,24 @@ function renderSquadTable(team, isEditable) {
   const tbody = document.getElementById('squadAthletesTable');
   if (!tbody) return;
   const athletes = team.athletes || [];
+  const cols = isEditable ? 4 : 3;
   if (athletes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${isEditable ? 3 : 2}" class="empty">Nenhum atleta registado nesta equipa.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${cols}" class="empty">Nenhum atleta registado nesta equipa.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = athletes
     .map((a, i) => ({ ...a, _idx: i }))
-    .sort((x, y) => x.name.localeCompare(y.name))
+    .sort((x, y) => {
+      const nx = parseInt(x.shirtNumber, 10), ny = parseInt(y.shirtNumber, 10);
+      const hx = !isNaN(nx), hy = !isNaN(ny);
+      if (hx && hy && nx !== ny) return nx - ny;
+      if (hx !== hy) return hx ? -1 : 1;
+      return (x.name || '').localeCompare(y.name || '');
+    })
     .map(a => `
       <tr>
+        <td style="text-align:center; font-weight:600;">${escapeHTML(a.shirtNumber || '–')}</td>
         <td>${escapeHTML(a.name)}</td>
         <td style="text-align:center;">${formatDateBR(a.birthDate)}</td>
         ${isEditable ? `<td style="text-align:center; white-space:nowrap;">
@@ -725,59 +735,44 @@ async function editAthleteFromSquad(teamId, idx) {
   const team = state.currentSquadTeam;
   if (!team || team.id !== teamId) return;
   const athlete = team.athletes[idx];
-  
+
   const newName = prompt(`Nome do atleta:`, athlete.name || '');
   if (newName === null) return;
   const newBirth = prompt(`Data de nascimento (AAAA-MM-DD):`, athlete.birthDate || '');
   if (newBirth === null) return;
+  const newShirt = prompt(`Número da camisa (padrão):`, athlete.shirtNumber || '');
+  if (newShirt === null) return;
 
-  const athletes = [...team.athletes];
+  const athletes = team.athletes.map(a => ({ ...a }));
   athletes[idx].name = newName.trim() || athlete.name;
   athletes[idx].birthDate = newBirth.trim();
-  
+  athletes[idx].shirtNumber = String(newShirt).trim().slice(0, 3);
+
   await updateDoc(doc(db, 'teams', teamId), { athletes });
-  team.athletes = athletes;
-  
-  const tIdx = state.teams.findIndex(t => t.id === teamId);
-  if(tIdx > -1) state.teams[tIdx].athletes = athletes;
-  const ptIdx = state.profTeams.findIndex(t => t.id === teamId);
-  if(ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
-
+  syncTeamAthletes(teamId, athletes, team);
   renderSquadTable(team, true);
-
-  if (state.currentTeam && state.currentTeam.id === teamId) {
-    state.currentTeam.athletes = athletes;
-    if(document.getElementById('athletesTable')) renderAthletes();
-  }
 }
 
 async function addAthleteToSquad(teamId) {
   const name = document.getElementById('squadAthleteName').value.trim();
   const birthDate = document.getElementById('squadAthleteBirthDate').value;
+  const shirtEl = document.getElementById('squadAthleteShirt');
+  const shirtNumber = shirtEl ? shirtEl.value.trim().slice(0, 3) : '';
   if (!name) return alert('Informe o nome do atleta.');
 
   const team = state.currentSquadTeam;
   if (!team || team.id !== teamId) return;
 
   const athletes = team.athletes ? [...team.athletes] : [];
-  athletes.push({ name, birthDate: birthDate || '' });
+  athletes.push({ name, birthDate: birthDate || '', shirtNumber });
 
   await updateDoc(doc(db, 'teams', teamId), { athletes });
-  team.athletes = athletes;
-
-  const tIdx = state.teams.findIndex(t => t.id === teamId);
-  if(tIdx > -1) state.teams[tIdx].athletes = athletes;
-  const ptIdx = state.profTeams.findIndex(t => t.id === teamId);
-  if(ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
+  syncTeamAthletes(teamId, athletes, team);
 
   document.getElementById('squadAthleteName').value = '';
   document.getElementById('squadAthleteBirthDate').value = '';
+  if (shirtEl) shirtEl.value = '';
   renderSquadTable(team, true);
-
-  if (state.currentTeam && state.currentTeam.id === teamId) {
-    state.currentTeam.athletes = athletes;
-    if(document.getElementById('athletesTable')) renderAthletes();
-  }
 }
 
 async function removeAthleteFromSquad(teamId, idx) {
@@ -787,20 +782,25 @@ async function removeAthleteFromSquad(teamId, idx) {
 
   const athletes = (team.athletes || []).filter((_, i) => i !== idx);
   await updateDoc(doc(db, 'teams', teamId), { athletes });
-  team.athletes = athletes;
+  syncTeamAthletes(teamId, athletes, team);
+  renderSquadTable(team, true);
+}
+
+// Sincroniza o array de atletas em todos os caches do state
+function syncTeamAthletes(teamId, athletes, squadTeam) {
+  if (squadTeam) squadTeam.athletes = athletes;
 
   const tIdx = state.teams.findIndex(t => t.id === teamId);
-  if(tIdx > -1) state.teams[tIdx].athletes = athletes;
+  if (tIdx > -1) state.teams[tIdx].athletes = athletes;
   const ptIdx = state.profTeams.findIndex(t => t.id === teamId);
-  if(ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
-
-  renderSquadTable(team, true);
+  if (ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
 
   if (state.currentTeam && state.currentTeam.id === teamId) {
     state.currentTeam.athletes = athletes;
-    if(document.getElementById('athletesTable')) renderAthletes();
+    if (document.getElementById('athletesTable')) renderAthletes();
   }
 }
+
 
 // ============================================================
 // CHAVEAMENTO DUPLA ELIMINAÇÃO & SALVAMENTO
@@ -1192,7 +1192,7 @@ function openSumulaModal(tournamentId, matchId) {
         alert('A versão da súmula salva é incompatível com a nova atualização. Uma nova súmula será iniciada.');
         localStorage.removeItem('sumulaBackup_' + matchId);
       } else {
-        state.currentSumula = {
+              state.currentSumula = {
           tournamentId, matchId, modality: t.modality,
           teamA, teamB,
           dataA: mergeSumulaData(teamA.athletes, backup.dataA, initAtleta),
@@ -1204,6 +1204,9 @@ function openSumulaModal(tournamentId, matchId) {
           penA: backup.penA || 0, penB: backup.penB || 0,
           timer: { totalSeconds: (backup.timer && backup.timer.totalSeconds) || SUMULA_TEMPO_PADRAO, isRunning: false, interval: null }
         };
+        // Atleta novo (ou sem número no backup) herda o número padrão do plantel
+        applyShirtNumbers(teamA.athletes, state.currentSumula.dataA, false);
+        applyShirtNumbers(teamB.athletes, state.currentSumula.dataB, false);
         renderSumulaModal();
         return;
       }
@@ -1232,6 +1235,10 @@ function openSumulaModal(tournamentId, matchId) {
     state.currentSumula.dataB[i]._name = b.name;
   });
 
+  // Súmula nova: puxa o número padrão cadastrado no plantel
+  applyShirtNumbers(teamA.athletes, state.currentSumula.dataA, true);
+  applyShirtNumbers(teamB.athletes, state.currentSumula.dataB, true);
+
   if (isQueimada) {
     state.currentSumula.faltantesA = faltantesA;
     state.currentSumula.faltantesB = faltantesB;
@@ -1240,6 +1247,19 @@ function openSumulaModal(tournamentId, matchId) {
   }
 
   renderSumulaModal();
+}
+
+// Copia o shirtNumber do plantel para a súmula.
+// force = true  -> sempre sobrescreve (súmula nova)
+// force = false -> apenas preenche o que estiver vazio (restauração de backup)
+function applyShirtNumbers(athletes, dataObj, force) {
+  (athletes || []).forEach((a, i) => {
+    const d = dataObj[i];
+    if (!d) return;
+    const padrao = String(a.shirtNumber || '').replace(/\D/g, '').slice(0, 3);
+    if (!padrao) return;
+    if (force || String(d.number || '').trim() === '') d.number = padrao;
+  });
 }
 
 function updateSumNumber(teamStr, athIdx, val) {
@@ -1266,8 +1286,49 @@ function refreshDupHighlight(teamStr) {
   document.querySelectorAll(`.sum-number[data-side="${side}"]`).forEach(inp => {
     const v = String(inp.value || '').trim();
     inp.classList.toggle('is-dup', v !== '' && dup.has(v));
-    inp.title = (v !== '' && dup.has(v)) ? '⚠️ Número repetido nesta equipe' : 'Número da camisa neste jogo';
+    inp.title = (v !== '' && dup.has(v)) ? '⚠️ Número repetido nesta equipe' : 'Número da camisa neste jogo (não altera o plantel)';
   });
+}
+
+// Grava os números usados nesta partida como padrão no plantel (Firestore)
+async function fixarNumerosNoPlantel() {
+  const s = state.currentSumula;
+  if (!s) return;
+
+  const userSchools = state.currentUser ? (state.currentUser.schoolIds || (state.currentUser.schoolId ? [state.currentUser.schoolId] : [])) : [];
+  const podeEditar = (team) => state.userRole === 'admin' || (state.userRole === 'professor' && userSchools.includes(team.schoolId));
+
+  const alvos = [
+    { team: s.teamA, data: s.dataA },
+    { team: s.teamB, data: s.dataB }
+  ].filter(x => podeEditar(x.team));
+
+  if (alvos.length === 0) return alert('Você não tem permissão para alterar o plantel destas equipes.');
+
+  const nomes = alvos.map(x => x.team.name).join(' e ');
+  if (!confirm(`Fixar os números desta partida como padrão no plantel de ${nomes}?\n\nOs números atuais do plantel serão substituídos.`)) return;
+
+  try {
+    for (const alvo of alvos) {
+      const athletes = (alvo.team.athletes || []).map((a, i) => ({
+        ...a,
+        shirtNumber: String((alvo.data[i] && alvo.data[i].number) || '').trim()
+      }));
+      await updateDoc(doc(db, 'teams', alvo.team.id), { athletes });
+      alvo.team.athletes = athletes;
+
+      const tIdx = state.teams.findIndex(t => t.id === alvo.team.id);
+      if (tIdx > -1) state.teams[tIdx].athletes = athletes;
+      const ptIdx = state.profTeams.findIndex(t => t.id === alvo.team.id);
+      if (ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
+      if (state.currentSquadTeam && state.currentSquadTeam.id === alvo.team.id) state.currentSquadTeam.athletes = athletes;
+      if (state.currentTeam && state.currentTeam.id === alvo.team.id) state.currentTeam.athletes = athletes;
+    }
+    alert('Números fixados no plantel com sucesso!');
+  } catch (e) {
+    console.error('Erro ao fixar números:', e);
+    alert('Falha ao gravar os números no plantel. Verifique a ligação.');
+  }
 }
 
 function updatePen(side, val) {
@@ -1381,18 +1442,24 @@ function renderSumulaModal() {
           if (dx.base && !dy.base) return 1;
           if (!dx.base && dy.base) return -1;
         }
+        const nx = parseInt(dx.number, 10), ny = parseInt(dy.number, 10);
+        const hx = !isNaN(nx), hy = !isNaN(ny);
+        if (hx && hy && nx !== ny) return nx - ny;
+        if (hx !== hy) return hx ? -1 : 1;
         return x.name.localeCompare(y.name);
       })
       .map(a => {
         const d = dataObj[a._origIdx];
+        const padrao = String(a.shirtNumber || '').trim();
+        const alterado = padrao !== '' && String(d.number || '').trim() !== padrao;
 
         const numberCell = `
             <td style="text-align:center;">
               <input type="text" inputmode="numeric" maxlength="3"
-                     class="sum-number" data-side="${side}"
-                     style="width:42px; text-align:center; padding:2px; font-weight:bold; border:1px solid #ccc; border-radius:4px;"
+                     class="sum-number${alterado ? ' is-changed' : ''}" data-side="${side}"
+                     style="width:42px; text-align:center; padding:2px; font-weight:bold; border:1px solid ${alterado ? '#ff9800' : '#ccc'}; border-radius:4px;"
                      value="${escapeHTML(d.number || '')}" placeholder="Nº"
-                     title="Número da camisa neste jogo"
+                     title="${alterado ? 'Alterado neste jogo (plantel: ' + escapeHTML(padrao) + ')' : 'Número da camisa neste jogo'}"
                      oninput="app.updateSumNumber('${teamStr}', ${a._origIdx}, this.value)">
             </td>`;
 
@@ -1489,9 +1556,12 @@ function renderSumulaModal() {
 
     ${tieHtml}
 
-    <p class="small" style="text-align:center; color:#666; margin:0 0 10px;">
-      Preencha o <b>número da camisa</b> apenas dos atletas escalados neste jogo. Quem ficar sem número não entra na súmula oficial.
-    </p>
+    <div style="display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; margin:0 0 10px;">
+      <p class="small" style="text-align:center; color:#666; margin:0;">
+        Os números vêm do <b>plantel</b> e podem ser alterados só para este jogo (borda laranja = alterado). Sem número, o atleta não entra na súmula.
+      </p>
+      <button class="secondary small-btn" style="margin:0; padding:5px 10px;" onclick="app.fixarNumerosNoPlantel()" title="Gravar estes números como padrão no plantel">💾 Fixar no plantel</button>
+    </div>
 
     <div class="sumula-container">
       <div class="sumula-team team-a">
@@ -1638,7 +1708,6 @@ function calculateStandings(tournament) {
   if (finalGameMatch) {
     const championId = getWinner(finalGameMatch.id);
     const runnerUpId = getLoser(finalGameMatch.id);
-    // posNum passa a ser explícito para evitar parseInt em rótulos de faixa
     if (championId) standings.push({ pos: '1º Lugar', posNum: 1, teamId: championId });
     if (runnerUpId) standings.push({ pos: '2º Lugar', posNum: 2, teamId: runnerUpId });
   }
@@ -1646,7 +1715,6 @@ function calculateStandings(tournament) {
   const losersCols = map.losers;
   const numCols = losersCols.length;
 
-  // Gera as faixas a partir da última coluna dos perdedores para trás
   const faixas = [
     { offset: 1, base: 3 },
     { offset: 2, base: 4 },
@@ -1666,7 +1734,6 @@ function calculateStandings(tournament) {
       standings.push({ pos: `${f.base}º Lugar`, posNum: f.base, teamId: losers[0] });
     } else {
       const label = `${f.base}º - ${f.base + losers.length - 1}º Lugar`;
-      // Cada empatado recebe posNum próprio para não distorcer a contagem de medalhas
       losers.forEach((id, i) => standings.push({ pos: label, posNum: f.base + i, teamId: id }));
     }
   });
@@ -1735,7 +1802,6 @@ function renderGeneralStandings() {
       const schoolId = team.schoolId;
       if (!schoolStats[schoolId]) return;
 
-      // Usa posNum calculado (não parseInt de rótulo com faixa)
       const posNum = item.posNum;
       if (!posNum) return;
 
@@ -1789,7 +1855,7 @@ function renderGeneralStandings() {
 
 async function loadProfTeams() {
   const userSchools = state.currentUser ? (state.currentUser.schoolIds || (state.currentUser.schoolId ? [state.currentUser.schoolId] : [])) : [];
-  
+
   if (userSchools.length === 0) {
     state.profTeams = [];
     renderProfTeams();
@@ -1833,13 +1899,21 @@ function openAthletes(teamId) {
 function renderAthletes() {
   const team = state.currentTeam;
   const tbody = document.getElementById('athletesTable');
+  if (!tbody) return;
   const athletes = (team && team.athletes) ? team.athletes : [];
-  if (athletes.length === 0) { tbody.innerHTML = '<tr><td colspan="3" class="empty">Nenhum atleta registado.</td></tr>'; return; }
+  if (athletes.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="empty">Nenhum atleta registado.</td></tr>'; return; }
   tbody.innerHTML = athletes
     .map((a, i) => ({ ...a, _idx: i }))
-    .sort((x, y) => x.name.localeCompare(y.name))
+    .sort((x, y) => {
+      const nx = parseInt(x.shirtNumber, 10), ny = parseInt(y.shirtNumber, 10);
+      const hx = !isNaN(nx), hy = !isNaN(ny);
+      if (hx && hy && nx !== ny) return nx - ny;
+      if (hx !== hy) return hx ? -1 : 1;
+      return (x.name || '').localeCompare(y.name || '');
+    })
     .map(a => `
       <tr>
+        <td style="text-align:center; font-weight:600;">${escapeHTML(a.shirtNumber || '–')}</td>
         <td>${escapeHTML(a.name)}</td>
         <td style="text-align:center;">${formatDateBR(a.birthDate)}</td>
         <td style="text-align:center; white-space:nowrap;">
@@ -1853,23 +1927,27 @@ async function editAthlete(idx) {
   const team = state.currentTeam;
   if (!team) return;
   const athlete = team.athletes[idx];
-  
+
   const newName = prompt(`Nome do atleta:`, athlete.name || '');
-  if (newName === null) return; 
+  if (newName === null) return;
   const newBirth = prompt(`Data de nascimento (AAAA-MM-DD):`, athlete.birthDate || '');
-  if (newBirth === null) return; 
-  
-  const athletes = [...team.athletes];
+  if (newBirth === null) return;
+  const newShirt = prompt(`Número da camisa (padrão):`, athlete.shirtNumber || '');
+  if (newShirt === null) return;
+
+  const athletes = team.athletes.map(a => ({ ...a }));
   athletes[idx].name = newName.trim() || athlete.name;
   athletes[idx].birthDate = newBirth.trim();
-  
+  athletes[idx].shirtNumber = String(newShirt).replace(/\D/g, '').slice(0, 3);
+
   await updateDoc(doc(db, 'teams', team.id), { athletes });
   team.athletes = athletes;
-  
+
   const tIdx = state.teams.findIndex(t => t.id === team.id);
-  if(tIdx > -1) state.teams[tIdx].athletes = athletes;
+  if (tIdx > -1) state.teams[tIdx].athletes = athletes;
   const ptIdx = state.profTeams.findIndex(t => t.id === team.id);
-  if(ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
+  if (ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
+  if (state.currentSquadTeam && state.currentSquadTeam.id === team.id) state.currentSquadTeam.athletes = athletes;
 
   renderAthletes();
 }
@@ -1877,15 +1955,24 @@ async function editAthlete(idx) {
 async function addAthlete() {
   const name = document.getElementById('athleteName').value.trim();
   const birthDate = document.getElementById('athleteBirthDate').value;
+  const shirtEl = document.getElementById('athleteShirt');
+  const shirtNumber = shirtEl ? shirtEl.value.replace(/\D/g, '').slice(0, 3) : '';
   if (!name) return alert('Informe o nome do atleta.');
   const team = state.currentTeam;
   if (!team) return;
   const athletes = team.athletes ? [...team.athletes] : [];
-  athletes.push({ name, birthDate: birthDate || '' });
+  athletes.push({ name, birthDate: birthDate || '', shirtNumber });
   await updateDoc(doc(db, 'teams', team.id), { athletes });
   team.athletes = athletes;
+
+  const tIdx = state.teams.findIndex(t => t.id === team.id);
+  if (tIdx > -1) state.teams[tIdx].athletes = athletes;
+  const ptIdx = state.profTeams.findIndex(t => t.id === team.id);
+  if (ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
+
   document.getElementById('athleteName').value = '';
   document.getElementById('athleteBirthDate').value = '';
+  if (shirtEl) shirtEl.value = '';
   renderAthletes();
 }
 
@@ -1896,6 +1983,12 @@ async function removeAthlete(idx) {
   const athletes = (team.athletes || []).filter((_, i) => i !== idx);
   await updateDoc(doc(db, 'teams', team.id), { athletes });
   team.athletes = athletes;
+
+  const tIdx = state.teams.findIndex(t => t.id === team.id);
+  if (tIdx > -1) state.teams[tIdx].athletes = athletes;
+  const ptIdx = state.profTeams.findIndex(t => t.id === team.id);
+  if (ptIdx > -1) state.profTeams[ptIdx].athletes = athletes;
+
   renderAthletes();
 }
 
@@ -1930,7 +2023,7 @@ async function openProfTournamentDetail(id) {
     <span class="badge ${tournament.category}">${CATEGORY_LABELS[tournament.category]}</span>
     <span class="badge ${tournament.gender}">${GENDER_LABELS[tournament.gender]}</span>
     <span class="badge" style="text-transform:capitalize; margin-left:6px;">${statusToLabel(tournament.status)}</span>`;
-  
+
   renderStandings(tournament, 'ptdStandings');
   renderBracketDE(tournament, 'ptdBracket', true);
   show('profTournament-detail');
@@ -1952,12 +2045,12 @@ window.app = {
   openManageTeamsModal, saveTournamentTeams, deleteTournament,
   shuffleTournamentTeams, startTournament,
   saveInlineResultDE, undoMatchResultDE, executeSaveResult,
-  openTeamSquadModal, addAthleteToSquad, removeAthleteFromSquad, editAthleteFromSquad, 
+  openTeamSquadModal, addAthleteToSquad, removeAthleteFromSquad, editAthleteFromSquad,
   closeModal,
   openAthletes, addAthlete, removeAthlete, editAthlete,
   loadProfTournaments, openProfTournamentDetail, toggleSidebar,
   renderGeneralStandings,
   openSumulaModal, updateSum, finishSumula, toggleTimer, adjustTimer, resetTimer,
-  updateSumNumber, refreshDupHighlight,
+  updateSumNumber, refreshDupHighlight, updatePen, fixarNumerosNoPlantel,
   migrateProfessorsToUsers
 };
