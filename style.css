@@ -332,3 +332,5 @@ input.inline-score {
   border-color: #dc2626;
   background: #fef2f2;
 }
+.sum-number.is-dup { border-color:#f44336 !important; background:#ffebee; color:#c62828; }
+.sum-number.is-changed { background:#fff8e1; }
