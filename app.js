@@ -721,15 +721,45 @@ function renderSquadTable(team, isEditable) {
     })
     .map(a => `
       <tr>
-        <td style="text-align:center; font-weight:600;">${escapeHTML(a.shirtNumber || '–')}</td>
+        <td style="text-align:center;">
+          ${isEditable
+            ? `<input type="text" inputmode="numeric" maxlength="3"
+                     value="${escapeHTML(a.shirtNumber || '')}" placeholder="–"
+                     title="Número da camisa (padrão do plantel)"
+                     style="width:48px; text-align:center; padding:5px; font-weight:700; border:1px solid #ddd; border-radius:6px;"
+                     oninput="this.value=this.value.replace(/\\D/g,'')"
+                     onchange="app.saveSquadNumber('${team.id}', ${a._idx}, this.value)"
+                     onkeydown="if(event.key==='Enter')this.blur()">`
+            : `<span style="font-weight:600;">${escapeHTML(a.shirtNumber || '–')}</span>`}
+        </td>
         <td>${escapeHTML(a.name)}</td>
         <td style="text-align:center;">${formatDateBR(a.birthDate)}</td>
         ${isEditable ? `<td style="text-align:center; white-space:nowrap;">
-          <button class="secondary small-btn" style="padding:4px 8px; margin:2px;" onclick="app.editAthleteFromSquad('${team.id}', ${a._idx})" title="Editar">✏️</button>
+          <button class="secondary small-btn" style="padding:4px 8px; margin:2px;" onclick="app.editAthleteFromSquad('${team.id}', ${a._idx})" title="Editar nome/data">✏️</button>
           <button class="danger small-btn" style="padding:4px 8px; margin:2px;" onclick="app.removeAthleteFromSquad('${team.id}', ${a._idx})" title="Excluir">🗑️</button>
         </td>` : ''}
       </tr>`).join('');
 }
+// Salva o número direto na caixinha da tabela (sem prompt e sem re-renderizar)
+async function saveSquadNumber(teamId, idx, val) {
+  const team = state.currentSquadTeam;
+  if (!team || team.id !== teamId || !team.athletes[idx]) return;
+
+  const num = String(val || '').replace(/\D/g, '').slice(0, 3);
+  if ((team.athletes[idx].shirtNumber || '') === num) return;
+
+  const athletes = team.athletes.map(a => ({ ...a }));
+  athletes[idx].shirtNumber = num;
+
+  try {
+    await updateDoc(doc(db, 'teams', teamId), { athletes });
+    syncTeamAthletes(teamId, athletes, team);
+  } catch (e) {
+    console.error(e);
+    alert('Falha ao salvar o número. Verifique a ligação.');
+  }
+}
+
 
 async function editAthleteFromSquad(teamId, idx) {
   const team = state.currentSquadTeam;
@@ -740,13 +770,10 @@ async function editAthleteFromSquad(teamId, idx) {
   if (newName === null) return;
   const newBirth = prompt(`Data de nascimento (AAAA-MM-DD):`, athlete.birthDate || '');
   if (newBirth === null) return;
-  const newShirt = prompt(`Número da camisa (padrão):`, athlete.shirtNumber || '');
-  if (newShirt === null) return;
 
   const athletes = team.athletes.map(a => ({ ...a }));
   athletes[idx].name = newName.trim() || athlete.name;
   athletes[idx].birthDate = newBirth.trim();
-  athletes[idx].shirtNumber = String(newShirt).trim().slice(0, 3);
 
   await updateDoc(doc(db, 'teams', teamId), { athletes });
   syncTeamAthletes(teamId, athletes, team);
@@ -2052,5 +2079,5 @@ window.app = {
   renderGeneralStandings,
   openSumulaModal, updateSum, finishSumula, toggleTimer, adjustTimer, resetTimer,
   updateSumNumber, refreshDupHighlight, updatePen, fixarNumerosNoPlantel,
-  migrateProfessorsToUsers
+  migrateProfessorsToUsers, openTeamSquadModal, addAthleteToSquad, removeAthleteFromSquad, editAthleteFromSquad, saveSquadNumber,
 };
