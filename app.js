@@ -1053,24 +1053,34 @@ async function undoMatchResultDE(tournamentId, jogoId) {
 // ============================================================
 // LÓGICA DA SÚMULA ONLINE, TEMPORIZADOR COM TIMESTAMP E AUTO-SAVE
 // ============================================================
+// LÓGICA DA SÚMULA ONLINE, TEMPORIZADOR COM TIMESTAMP E AUTO-SAVE
+// ============================================================
+
+const SUMULA_TEMPO_PADRAO = 15 * 60;
 
 function saveSumulaLocal() {
   if (!state.currentSumula) return;
   const s = state.currentSumula;
-  
+
   const backup = {
     tournamentId: s.tournamentId, matchId: s.matchId, modality: s.modality,
     dataA: s.dataA, dataB: s.dataB, scoreA: s.scoreA, scoreB: s.scoreB,
     faltantesA: s.faltantesA, faltantesB: s.faltantesB,
+    penA: s.penA, penB: s.penB,
     timer: { totalSeconds: s.timer.totalSeconds, isRunning: false, interval: null }
   };
-  
-  localStorage.setItem('sumulaBackup_' + s.matchId, JSON.stringify(backup));
-  
+
+  try {
+    localStorage.setItem('sumulaBackup_' + s.matchId, JSON.stringify(backup));
+  } catch (e) {
+    console.warn('Falha ao gravar backup local da súmula:', e);
+    return;
+  }
+
   const autoSaveText = document.getElementById('autoSaveText');
-  if(autoSaveText) {
-     const now = new Date();
-     autoSaveText.textContent = `🟢 Salvo localmente às ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+  if (autoSaveText) {
+    const now = new Date();
+    autoSaveText.textContent = `🟢 Salvo localmente às ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
   }
 }
 
@@ -1081,19 +1091,22 @@ function formatTime(secs) {
 }
 
 function toggleTimer() {
-  initAudio(); 
+  initAudio();
+  if (!state.currentSumula) return;
   const t = state.currentSumula.timer;
   if (!t) return;
-  
+
   if (t.isRunning) {
     clearInterval(t.interval);
+    t.interval = null;
     t.isRunning = false;
   } else {
+    if (t.totalSeconds <= 0) return alert('Ajuste o relógio antes de iniciar.');
+    if (t.interval) clearInterval(t.interval);
     t.isRunning = true;
     t.targetTime = Date.now() + (t.totalSeconds * 1000);
     t.interval = setInterval(() => {
-      const now = Date.now();
-      const diff = Math.round((t.targetTime - now) / 1000);
+      const diff = Math.round((t.targetTime - Date.now()) / 1000);
 
       if (diff > 0) {
         if (diff !== t.totalSeconds) {
@@ -1106,6 +1119,7 @@ function toggleTimer() {
       } else {
         t.totalSeconds = 0;
         clearInterval(t.interval);
+        t.interval = null;
         t.isRunning = false;
         playEndWarning();
         renderSumulaModal();
@@ -1116,78 +1130,97 @@ function toggleTimer() {
 }
 
 function adjustTimer(mins) {
+  if (!state.currentSumula) return;
   const t = state.currentSumula.timer;
   if (!t) return;
   t.totalSeconds += mins * 60;
   if (t.totalSeconds < 0) t.totalSeconds = 0;
-  if (t.isRunning) {
-    t.targetTime = Date.now() + (t.totalSeconds * 1000);
-  }
+  if (t.isRunning) t.targetTime = Date.now() + (t.totalSeconds * 1000);
   const display = document.getElementById('timerDisplay');
   if (display) display.textContent = formatTime(t.totalSeconds);
   saveSumulaLocal();
 }
 
 function resetTimer() {
-  if(!confirm('Deseja reiniciar o relógio para 15:00?')) return;
+  if (!confirm('Deseja reiniciar o relógio para 15:00?')) return;
   const t = state.currentSumula.timer;
-  if (t.isRunning) {
+  if (t.isRunning || t.interval) {
     clearInterval(t.interval);
+    t.interval = null;
     t.isRunning = false;
   }
-  t.totalSeconds = 15 * 60;
+  t.totalSeconds = SUMULA_TEMPO_PADRAO;
   renderSumulaModal();
   saveSumulaLocal();
 }
 
 function openSumulaModal(tournamentId, matchId) {
-  const t = state.tournaments.find(x => x.id === tournamentId);
+  const t = state.tournaments.find(x => x.id === tournamentId) || state.currentTournament;
   if (!t) return;
   const map = MAPS[t.bracketSize];
+  if (!map) return alert('Chaveamento não iniciado.');
   const match = matchById(map, matchId);
-  const slotA = resolveSlot(map, match.s[0], t.seeds, t.results || {});
-  const slotB = resolveSlot(map, match.s[1], t.seeds, t.results || {});
-  
+  if (!match) return;
+
+  const slotA = resolveSlot(map, match.s[0], t.seeds || {}, t.results || {});
+  const slotB = resolveSlot(map, match.s[1], t.seeds || {}, t.results || {});
   if (!slotA.decided || !slotB.decided) return alert('As equipes ainda não estão definidas para este jogo.');
 
   const teamA = state.teams.find(x => x.id === slotA.teamId);
   const teamB = state.teams.find(x => x.id === slotB.teamId);
+  if (!teamA || !teamB) return alert('Não foi possível carregar os planteis das duas equipes.');
 
   const isQueimada = t.modality === 'queimada';
   const initAtleta = initAtletaFor(t.modality);
 
+  // Limpa timer de uma súmula anterior que tenha ficado ativa
+  if (state.currentSumula && state.currentSumula.timer && state.currentSumula.timer.interval) {
+    clearInterval(state.currentSumula.timer.interval);
+  }
+
+  const faltantesA = isQueimada ? Math.max(0, 12 - (teamA.athletes || []).length) : 0;
+  const faltantesB = isQueimada ? Math.max(0, 12 - (teamB.athletes || []).length) : 0;
+
   const backupStr = localStorage.getItem('sumulaBackup_' + matchId);
   if (backupStr) {
     if (confirm('Foi encontrada uma súmula em andamento salva no seu dispositivo para este jogo.\n\nDeseja restaurá-la de onde parou?')) {
-      const backup = JSON.parse(backupStr);
-      const isOldFormat = Object.keys(backup.dataA || {}).some(k => isNaN(k));
+      let backup = null;
+      try { backup = JSON.parse(backupStr); } catch (e) { backup = null; }
+
+      const isOldFormat = !backup || Object.keys(backup.dataA || {}).some(k => isNaN(k));
       if (isOldFormat) {
-          alert('A versão da súmula salva é incompatível com a nova atualização. Uma nova súmula será iniciada.');
-          localStorage.removeItem('sumulaBackup_' + matchId);
+        alert('A versão da súmula salva é incompatível com a nova atualização. Uma nova súmula será iniciada.');
+        localStorage.removeItem('sumulaBackup_' + matchId);
       } else {
-          // Reconcilia com o plantel atual: atleta novo entra, atleta removido sai.
-          state.currentSumula = {
-            tournamentId, matchId, modality: t.modality,
-            teamA, teamB, 
-            dataA: mergeSumulaData(teamA.athletes, backup.dataA, initAtleta),
-            dataB: mergeSumulaData(teamB.athletes, backup.dataB, initAtleta),
-            scoreA: backup.scoreA, scoreB: backup.scoreB,
-            faltantesA: backup.faltantesA, faltantesB: backup.faltantesB,
-            timer: { totalSeconds: backup.timer.totalSeconds, isRunning: false, interval: null }
-          };
-          renderSumulaModal();
-          return;
+        state.currentSumula = {
+          tournamentId, matchId, modality: t.modality,
+          teamA, teamB,
+          dataA: mergeSumulaData(teamA.athletes, backup.dataA, initAtleta),
+          dataB: mergeSumulaData(teamB.athletes, backup.dataB, initAtleta),
+          scoreA: backup.scoreA || 0, scoreB: backup.scoreB || 0,
+          // Faltantes sempre recalculados a partir do plantel ATUAL
+          faltantesA: isQueimada ? faltantesA : undefined,
+          faltantesB: isQueimada ? faltantesB : undefined,
+          penA: backup.penA || 0, penB: backup.penB || 0,
+          timer: { totalSeconds: (backup.timer && backup.timer.totalSeconds) || SUMULA_TEMPO_PADRAO, isRunning: false, interval: null }
+        };
+        renderSumulaModal();
+        return;
       }
     } else {
-      localStorage.removeItem('sumulaBackup_' + matchId);
+      if (confirm('⚠️ Descartar DEFINITIVAMENTE a súmula salva e começar do zero?\n\nEsta ação não pode ser desfeita.')) {
+        localStorage.removeItem('sumulaBackup_' + matchId);
+      } else {
+        return; // Não abre nada; backup preservado
+      }
     }
   }
 
   state.currentSumula = {
     tournamentId, matchId, modality: t.modality,
     teamA, teamB, dataA: {}, dataB: {},
-    scoreA: 0, scoreB: 0,
-    timer: { totalSeconds: 15 * 60, isRunning: false, interval: null }
+    scoreA: 0, scoreB: 0, penA: 0, penB: 0,
+    timer: { totalSeconds: SUMULA_TEMPO_PADRAO, isRunning: false, interval: null }
   };
 
   (teamA.athletes || []).forEach((a, i) => {
@@ -1200,12 +1233,10 @@ function openSumulaModal(tournamentId, matchId) {
   });
 
   if (isQueimada) {
-    const faltantesA = Math.max(0, 12 - (teamA.athletes || []).length);
-    const faltantesB = Math.max(0, 12 - (teamB.athletes || []).length);
-    state.currentSumula.scoreA = faltantesB; 
-    state.currentSumula.scoreB = faltantesA;
     state.currentSumula.faltantesA = faltantesA;
     state.currentSumula.faltantesB = faltantesB;
+    state.currentSumula.scoreA = faltantesB;
+    state.currentSumula.scoreB = faltantesA;
   }
 
   renderSumulaModal();
@@ -1220,12 +1251,17 @@ function updateSumNumber(teamStr, athIdx, val) {
   refreshDupHighlight(teamStr);
 }
 
-// Marca em vermelho os números repetidos dentro da mesma equipe (apenas aviso visual)
+// Retorna a lista de números repetidos dentro da mesma equipe
+function numerosDuplicados(dataObj) {
+  const nums = Object.values(dataObj || {}).map(v => String(v.number || '').trim()).filter(Boolean);
+  return [...new Set(nums.filter((n, i) => nums.indexOf(n) !== i))];
+}
+
+// Marca em vermelho os números repetidos dentro da mesma equipe (aviso visual)
 function refreshDupHighlight(teamStr) {
   const s = state.currentSumula;
   if (!s || !s[teamStr]) return;
-  const nums = Object.values(s[teamStr]).map(v => String(v.number || '').trim()).filter(Boolean);
-  const dup = new Set(nums.filter((n, i) => nums.indexOf(n) !== i));
+  const dup = new Set(numerosDuplicados(s[teamStr]));
   const side = teamStr === 'dataA' ? 'A' : 'B';
   document.querySelectorAll(`.sum-number[data-side="${side}"]`).forEach(inp => {
     const v = String(inp.value || '').trim();
@@ -1234,35 +1270,55 @@ function refreshDupHighlight(teamStr) {
   });
 }
 
+function updatePen(side, val) {
+  const s = state.currentSumula;
+  if (!s) return;
+  const n = parseInt(val);
+  s['pen' + side] = isNaN(n) || n < 0 ? 0 : n;
+  saveSumulaLocal();
+  const info = document.getElementById('sumTieInfo');
+  if (info) {
+    const dif = (s.penA || 0) - (s.penB || 0);
+    info.textContent = dif === 0
+      ? '⚠️ O desempate também está empatado.'
+      : `✅ Vencedor por desempate: ${dif > 0 ? s.teamA.name : s.teamB.name}`;
+    info.style.color = dif === 0 ? 'var(--danger)' : '#2e7d32';
+  }
+}
+
 function calcSumulaScore() {
   const s = state.currentSumula;
+  if (!s) return;
   let ptsA = 0, ptsB = 0;
-  
+
   if (s.modality === 'queimada') {
     ptsA = s.faltantesB || 0; ptsB = s.faltantesA || 0;
-    Object.values(s.dataB).forEach(v => { if(v.burned) ptsA++; });
-    Object.values(s.dataA).forEach(v => { if(v.burned) ptsB++; });
+    Object.values(s.dataB).forEach(v => { if (v.burned) ptsA++; });
+    Object.values(s.dataA).forEach(v => { if (v.burned) ptsB++; });
   } else {
-    Object.values(s.dataA).forEach(v => { ptsA += v.goals; });
-    Object.values(s.dataB).forEach(v => { ptsB += v.goals; });
+    Object.values(s.dataA).forEach(v => { ptsA += (v.goals || 0); });
+    Object.values(s.dataB).forEach(v => { ptsB += (v.goals || 0); });
   }
-  
+
   s.scoreA = ptsA; s.scoreB = ptsB;
-  
+
   const pA = document.getElementById('sumScoreA');
   const pB = document.getElementById('sumScoreB');
-  if(pA) pA.textContent = ptsA;
-  if(pB) pB.textContent = ptsB;
+  if (pA) pA.textContent = ptsA;
+  if (pB) pB.textContent = ptsB;
 }
 
 function updateSum(teamStr, athIdx, field, increment = true) {
   const s = state.currentSumula;
+  if (!s || !s[teamStr] || !s[teamStr][athIdx]) return;
   const d = s[teamStr][athIdx];
   const isQ = s.modality === 'queimada';
-  
+
   const teamObj = teamStr === 'dataA' ? s.teamA : s.teamB;
-  const athName = teamObj.athletes[athIdx].name || 'Atleta';
-  
+  const athFromTeam = (teamObj.athletes || [])[athIdx];
+  // Fallback seguro: se o plantel mudou, usa o nome guardado na própria súmula
+  const athName = (athFromTeam && athFromTeam.name) || d._name || 'Atleta';
+
   if (field === 'base') {
     if (!d.base) {
       Object.values(s[teamStr]).forEach(v => { v.base = false; v.returned = false; });
@@ -1276,7 +1332,7 @@ function updateSum(teamStr, athIdx, field, increment = true) {
     if (increment) {
       d.yellow++;
       if (isQ) {
-        const totalY = Object.values(s[teamStr]).reduce((sum, a) => sum + a.yellow, 0);
+        const totalY = Object.values(s[teamStr]).reduce((sum, a) => sum + (a.yellow || 0), 0);
         if (totalY > 3 && !d.burned) {
           d.burned = true;
           setTimeout(() => alert(`⚠️ Limite de Cartões da Equipe!\nEste é o ${totalY}º cartão amarelo coletivo.\nO atleta ${athName} foi queimado automaticamente.`), 50);
@@ -1285,45 +1341,57 @@ function updateSum(teamStr, athIdx, field, increment = true) {
     } else {
       if (d.yellow > 0) d.yellow--;
     }
+  } else if (field === 'red') {
+    if (increment) {
+      d.red++;
+      // Em queimada, o vermelho retira o atleta da partida (queima)
+      if (isQ && !d.burned) {
+        d.burned = true;
+        setTimeout(() => alert(`🟥 Cartão vermelho para ${athName}.\nO atleta foi queimado/excluído da partida.`), 50);
+      }
+    } else {
+      if (d.red > 0) d.red--;
+    }
   } else if (typeof d[field] === 'boolean') {
     d[field] = !d[field];
   } else {
-    if(increment) d[field]++;
-    else if(d[field] > 0) d[field]--;
+    if (increment) d[field]++;
+    else if (d[field] > 0) d[field]--;
   }
-  
-  renderSumulaModal(); 
-  saveSumulaLocal(); 
+
+  renderSumulaModal();
+  saveSumulaLocal();
 }
 
 function renderSumulaModal() {
   const s = state.currentSumula;
+  if (!s) return;
   const isQ = s.modality === 'queimada';
   calcSumulaScore();
 
   const buildRows = (team, dataObj, teamStr) => {
     const side = teamStr === 'dataA' ? 'A' : 'B';
     return (team.athletes || [])
-      .map((a, i) => ({ ...a, _origIdx: i })) 
+      .map((a, i) => ({ ...a, _origIdx: i }))
+      .filter(a => dataObj[a._origIdx])
       .sort((x, y) => {
         const dx = dataObj[x._origIdx];
         const dy = dataObj[y._origIdx];
-        if (dx && dy && isQ) {
-            if (dx.base && !dy.base) return 1;
-            if (!dx.base && dy.base) return -1;
+        if (isQ) {
+          if (dx.base && !dy.base) return 1;
+          if (!dx.base && dy.base) return -1;
         }
         return x.name.localeCompare(y.name);
       })
       .map(a => {
         const d = dataObj[a._origIdx];
-        if (!d) return ''; 
 
         const numberCell = `
             <td style="text-align:center;">
               <input type="text" inputmode="numeric" maxlength="3"
                      class="sum-number" data-side="${side}"
-                     style="width:42px; text-align:center; padding:2px; font-weight:bold; border:1px solid #ccc; border-radius:4px;" 
-                     value="${escapeHTML(d.number || '')}" placeholder="Nº" 
+                     style="width:42px; text-align:center; padding:2px; font-weight:bold; border:1px solid #ccc; border-radius:4px;"
+                     value="${escapeHTML(d.number || '')}" placeholder="Nº"
                      title="Número da camisa neste jogo"
                      oninput="app.updateSumNumber('${teamStr}', ${a._origIdx}, this.value)">
             </td>`;
@@ -1346,8 +1414,9 @@ function renderSumulaModal() {
             </td>
             <td style="text-align:center;"><button class="action-btn ${baseBtnClass}" style="min-width:32px; height:28px;" onclick="app.updateSum('${teamStr}', ${a._origIdx}, 'base')">${baseBtnContent}</button></td>
             <td style="text-align:center;"><button class="action-btn ${d.burned?'active-burn':''}" onclick="app.updateSum('${teamStr}', ${a._origIdx}, 'burned')">☠️</button></td>
-            <td style="text-align:center;">
+            <td style="text-align:center; white-space:nowrap;">
               <button class="action-btn ${d.yellow>0?'active-yellow':''}" onclick="app.updateSum('${teamStr}', ${a._origIdx}, 'yellow')">🟨 ${d.yellow>0?d.yellow:''}</button>
+              <button class="action-btn ${d.red>0?'active-red':''}" onclick="app.updateSum('${teamStr}', ${a._origIdx}, 'red')">🟥 ${d.red>0?d.red:''}</button>
             </td>
           </tr>`;
         } else {
@@ -1368,14 +1437,40 @@ function renderSumulaModal() {
       }).join('');
   };
 
+  const headCols = isQ
+    ? '<th style="text-align:center; width:50px;">Base</th><th style="text-align:center; width:50px;">Queim.</th><th style="text-align:center; width:90px;">Cartões</th>'
+    : '<th style="text-align:center; width:100px;">Golos</th><th style="text-align:center; width:90px;">Cartões</th>';
+
+  // Painel de desempate: só aparece quando o placar está empatado
+  const isTie = s.scoreA === s.scoreB;
+  const difPen = (s.penA || 0) - (s.penB || 0);
+  const tieHtml = isTie ? `
+    <div class="sumula-tiebreak" style="border:1px dashed var(--danger); border-radius:8px; padding:10px; margin:0 0 12px; background:#fff8f8;">
+      <p class="small" style="margin:0 0 8px; font-weight:600; color:var(--danger);">
+        ⚖️ Placar empatado — registe o desempate (pênaltis / ponto extra) para poder fechar a súmula.
+      </p>
+      <div style="display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;">
+        <span class="small" style="max-width:160px; text-align:right;">${escapeHTML(s.teamA.name)}</span>
+        <input type="number" min="0" id="sumPenA" value="${s.penA || 0}" style="width:60px; text-align:center; padding:4px;"
+               oninput="app.updatePen('A', this.value)">
+        <span style="font-weight:bold;">X</span>
+        <input type="number" min="0" id="sumPenB" value="${s.penB || 0}" style="width:60px; text-align:center; padding:4px;"
+               oninput="app.updatePen('B', this.value)">
+        <span class="small" style="max-width:160px;">${escapeHTML(s.teamB.name)}</span>
+      </div>
+      <p class="small" id="sumTieInfo" style="text-align:center; margin:8px 0 0; font-weight:600; color:${difPen === 0 ? 'var(--danger)' : '#2e7d32'};">
+        ${difPen === 0 ? '⚠️ O desempate também está empatado.' : `✅ Vencedor por desempate: ${escapeHTML(difPen > 0 ? s.teamA.name : s.teamB.name)}`}
+      </p>
+    </div>` : '';
+
   const html = `
     <div class="modal-header" style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-start;">
       <h3 style="margin:0; font-size: 1.2rem;">⚽ Súmula Digital - ${MODALITY_LABELS[s.modality]}</h3>
       <button class="close-btn" style="width: auto !important; margin: 0 !important; padding: 6px 15px !important; flex-shrink: 0;" onclick="app.closeModal()">×</button>
     </div>
-    
+
     <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; gap:8px; margin-bottom: 15px;">
-      
+
       <div class="timer-box">
         <button class="timer-btn" style="width: auto !important; margin: 0 !important;" onclick="app.adjustTimer(-1)">-1m</button>
         <div class="timer-display" id="timerDisplay">${formatTime(s.timer.totalSeconds)}</div>
@@ -1392,6 +1487,8 @@ function renderSumulaModal() {
 
     </div>
 
+    ${tieHtml}
+
     <p class="small" style="text-align:center; color:#666; margin:0 0 10px;">
       Preencha o <b>número da camisa</b> apenas dos atletas escalados neste jogo. Quem ficar sem número não entra na súmula oficial.
     </p>
@@ -1402,7 +1499,7 @@ function renderSumulaModal() {
         <div class="sumula-table-wrapper">
           <table class="sumula-table">
             <thead>
-              <tr><th style="width:50px;">Nº</th><th>Atleta</th>${isQ ? '<th style="text-align:center; width:50px;">Base</th><th style="text-align:center; width:50px;">Queim.</th><th style="text-align:center; width:50px;">Cartão</th>' : '<th style="text-align:center; width:100px;">Golos</th><th style="text-align:center; width:90px;">Cartões</th>'}</tr>
+              <tr><th style="width:50px;">Nº</th><th>Atleta</th>${headCols}</tr>
             </thead>
             <tbody>${buildRows(s.teamA, s.dataA, 'dataA')}</tbody>
           </table>
@@ -1414,31 +1511,38 @@ function renderSumulaModal() {
         <div class="sumula-table-wrapper">
           <table class="sumula-table">
             <thead>
-              <tr><th style="width:50px;">Nº</th><th>Atleta</th>${isQ ? '<th style="text-align:center; width:50px;">Base</th><th style="text-align:center; width:50px;">Queim.</th><th style="text-align:center; width:50px;">Cartão</th>' : '<th style="text-align:center; width:100px;">Golos</th><th style="text-align:center; width:90px;">Cartões</th>'}</tr>
+              <tr><th style="width:50px;">Nº</th><th>Atleta</th>${headCols}</tr>
             </thead>
             <tbody>${buildRows(s.teamB, s.dataB, 'dataB')}</tbody>
           </table>
         </div>
       </div>
     </div>
-    
+
     <div class="sumula-footer">
       <span id="autoSaveText" style="font-size: 0.8rem; color: #4caf50;"></span>
       <button class="accent" style="font-size: 1.1rem; padding: 10px 30px;" onclick="app.finishSumula()">Salvar Súmula Oficial</button>
     </div>
   `;
 
-  openModal(html, true); 
+  openModal(html, true);
   refreshDupHighlight('dataA');
   refreshDupHighlight('dataB');
 }
 
 async function finishSumula() {
   const s = state.currentSumula;
+  if (!s) return;
   calcSumulaScore();
-  
-  if (s.scoreA === s.scoreB) {
-    return alert('Não pode haver empates nas eliminatórias. Assinale o ponto de desempate antes de fechar a súmula.');
+
+  // ---- Validação de números repetidos (bloqueante) ----
+  const dupA = numerosDuplicados(s.dataA);
+  const dupB = numerosDuplicados(s.dataB);
+  if (dupA.length || dupB.length) {
+    let msg = 'Existem números de camisa repetidos na mesma equipe. Corrija antes de fechar a súmula:\n';
+    if (dupA.length) msg += `\n• ${s.teamA.name}: ${dupA.join(', ')}`;
+    if (dupB.length) msg += `\n• ${s.teamB.name}: ${dupB.join(', ')}`;
+    return alert(msg);
   }
 
   // Somente atletas com número de camisa entram na súmula oficial
@@ -1452,14 +1556,49 @@ async function finishSumula() {
     const semTime = escaladosA.length === 0 ? s.teamA.name : s.teamB.name;
     if (!confirm(`A equipe "${semTime}" está sem nenhum atleta com número de camisa.\n\nSalvar a súmula assim mesmo?`)) return;
   }
-  
-  const winnerIdx = s.scoreA > s.scoreB ? 0 : 1;
-  const detailsObj = { dataA: escaladosA, dataB: escaladosB };
-  
-  await executeSaveResult(s.tournamentId, s.matchId, s.scoreA, s.scoreB, winnerIdx, detailsObj);
-  
+
+  // ---- Definição do vencedor (com desempate quando necessário) ----
+  let winnerIdx;
+  let tiebreak = null;
+
+  if (s.scoreA !== s.scoreB) {
+    winnerIdx = s.scoreA > s.scoreB ? 0 : 1;
+  } else {
+    const pA = s.penA || 0, pB = s.penB || 0;
+    if (pA === pB) {
+      return alert('Placar empatado. Registe o desempate (pênaltis / ponto extra) com valores diferentes para definir o vencedor.');
+    }
+    winnerIdx = pA > pB ? 0 : 1;
+    tiebreak = { penA: pA, penB: pB };
+    const vencedorNome = winnerIdx === 0 ? s.teamA.name : s.teamB.name;
+    if (!confirm(`Placar ${s.scoreA} x ${s.scoreB}.\nDesempate ${pA} x ${pB}.\n\nVencedor: ${vencedorNome}.\n\nConfirmar e fechar a súmula?`)) return;
+  }
+
+  const detailsObj = {
+    modality: s.modality,
+    teamAId: s.teamA.id, teamBId: s.teamB.id,
+    teamAName: s.teamA.name, teamBName: s.teamB.name,
+    dataA: escaladosA, dataB: escaladosB,
+    tempoRestante: s.timer.totalSeconds,
+    closedAt: new Date().toISOString()
+  };
+  if (s.modality === 'queimada') {
+    detailsObj.faltantesA = s.faltantesA || 0;
+    detailsObj.faltantesB = s.faltantesB || 0;
+  }
+  if (tiebreak) detailsObj.tiebreak = tiebreak;
+
+  try {
+    await executeSaveResult(s.tournamentId, s.matchId, s.scoreA, s.scoreB, winnerIdx, detailsObj);
+  } catch (e) {
+    console.error('Erro ao salvar a súmula:', e);
+    return alert('Falha ao salvar no servidor. O backup local foi mantido — verifique a ligação e tente novamente.');
+  }
+
+  // Só remove o backup depois da gravação bem-sucedida
   localStorage.removeItem('sumulaBackup_' + s.matchId);
   closeModal();
+  alert('Súmula salva com sucesso!');
 }
 
 // ============================================================
@@ -1469,6 +1608,7 @@ function calculateStandings(tournament) {
   if (tournament.status !== 'finished') return [];
   const size = tournament.bracketSize;
   const map = MAPS[size];
+  if (!map) return [];
   const results = tournament.results || {};
   const seeds = tournament.seeds || {};
 
@@ -1493,55 +1633,43 @@ function calculateStandings(tournament) {
   };
 
   const standings = [];
-  
+
   const finalGameMatch = map.winners.flat().find(g => g.label === 'Final');
   if (finalGameMatch) {
     const championId = getWinner(finalGameMatch.id);
     const runnerUpId = getLoser(finalGameMatch.id);
-    if (championId) standings.push({ pos: '1º Lugar', teamId: championId });
-    if (runnerUpId) standings.push({ pos: '2º Lugar', teamId: runnerUpId });
+    // posNum passa a ser explícito para evitar parseInt em rótulos de faixa
+    if (championId) standings.push({ pos: '1º Lugar', posNum: 1, teamId: championId });
+    if (runnerUpId) standings.push({ pos: '2º Lugar', posNum: 2, teamId: runnerUpId });
   }
 
   const losersCols = map.losers;
   const numCols = losersCols.length;
 
-  if (numCols >= 1) {
-    losersCols[numCols - 1].forEach(m => {
-      const loserId = getLoser(m.id);
-      if (loserId) standings.push({ pos: '3º Lugar', teamId: loserId });
-    });
-  }
+  // Gera as faixas a partir da última coluna dos perdedores para trás
+  const faixas = [
+    { offset: 1, base: 3 },
+    { offset: 2, base: 4 },
+    { offset: 3, base: 5 },
+    { offset: 4, base: 7 },
+    { offset: 5, base: 9 }
+  ];
 
-  if (numCols >= 2) {
-    losersCols[numCols - 2].forEach(m => {
-      const loserId = getLoser(m.id);
-      if (loserId) standings.push({ pos: '4º Lugar', teamId: loserId });
-    });
-  }
-
-  if (numCols >= 3) {
-    const col = losersCols[numCols - 3];
+  faixas.forEach(f => {
+    if (numCols < f.offset) return;
+    const col = losersCols[numCols - f.offset];
     const losers = [];
     col.forEach(m => { const id = getLoser(m.id); if (id) losers.push(id); });
-    const label = losers.length === 1 ? '5º Lugar' : '5º - 6º Lugar';
-    losers.forEach(id => standings.push({ pos: label, teamId: id }));
-  }
+    if (losers.length === 0) return;
 
-  if (numCols >= 4) {
-    const col = losersCols[numCols - 4];
-    const losers = [];
-    col.forEach(m => { const id = getLoser(m.id); if (id) losers.push(id); });
-    const label = losers.length === 1 ? '7º Lugar' : '7º - 8º Lugar';
-    losers.forEach(id => standings.push({ pos: label, teamId: id }));
-  }
-
-  if (numCols >= 5) {
-    const col = losersCols[numCols - 5];
-    const losers = [];
-    col.forEach(m => { const id = getLoser(m.id); if (id) losers.push(id); });
-    const label = losers.length === 1 ? '9º Lugar' : '9º - 10º Lugar';
-    losers.forEach(id => standings.push({ pos: label, teamId: id }));
-  }
+    if (losers.length === 1) {
+      standings.push({ pos: `${f.base}º Lugar`, posNum: f.base, teamId: losers[0] });
+    } else {
+      const label = `${f.base}º - ${f.base + losers.length - 1}º Lugar`;
+      // Cada empatado recebe posNum próprio para não distorcer a contagem de medalhas
+      losers.forEach((id, i) => standings.push({ pos: label, posNum: f.base + i, teamId: id }));
+    }
+  });
 
   return standings;
 }
@@ -1549,7 +1677,7 @@ function calculateStandings(tournament) {
 function renderStandings(tournament, containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  
+
   if (tournament.status !== 'finished') {
     container.innerHTML = '';
     container.classList.add('hidden');
@@ -1560,13 +1688,13 @@ function renderStandings(tournament, containerId) {
   if (!standings || standings.length === 0) return;
 
   let html = '<div class="standings-box"><h4 class="mb" style="color: var(--sidebar);">🏆 Classificação Final</h4><div class="standings-list">';
-  
+
   standings.forEach(item => {
     let medal = '';
     let extraClass = '';
-    if (item.pos === '1º Lugar') { medal = '🥇'; extraClass = 'first-place'; }
-    else if (item.pos === '2º Lugar') { medal = '🥈'; extraClass = 'second-place'; }
-    else if (item.pos === '3º Lugar') { medal = '🥉'; extraClass = 'third-place'; }
+    if (item.posNum === 1) { medal = '🥇'; extraClass = 'first-place'; }
+    else if (item.posNum === 2) { medal = '🥈'; extraClass = 'second-place'; }
+    else if (item.posNum === 3) { medal = '🥉'; extraClass = 'third-place'; }
     else { medal = '🏅'; extraClass = 'other-place'; }
 
     html += `
@@ -1576,7 +1704,7 @@ function renderStandings(tournament, containerId) {
       </div>
     `;
   });
-  
+
   html += '</div></div>';
   container.innerHTML = html;
   container.classList.remove('hidden');
@@ -1590,7 +1718,7 @@ function renderGeneralStandings() {
   if (!tbody) return;
 
   const schoolStats = {};
-  
+
   state.schools.forEach(s => {
     schoolStats[s.id] = {
       id: s.id, name: s.name, points: 0,
@@ -1600,21 +1728,23 @@ function renderGeneralStandings() {
 
   state.tournaments.filter(t => t.status === 'finished').forEach(tournament => {
     const standings = calculateStandings(tournament);
-    
+
     standings.forEach(item => {
       const team = state.teams.find(x => x.id === item.teamId);
       if (!team) return;
       const schoolId = team.schoolId;
       if (!schoolStats[schoolId]) return;
 
-      let posNum = parseInt(item.pos); 
-      
+      // Usa posNum calculado (não parseInt de rótulo com faixa)
+      const posNum = item.posNum;
+      if (!posNum) return;
+
       if (posNum === 1) schoolStats[schoolId].points += 10;
       else if (posNum === 2) schoolStats[schoolId].points += 7;
       else if (posNum === 3) schoolStats[schoolId].points += 4;
       else if (posNum === 4) schoolStats[schoolId].points += 2;
-      else if (posNum >= 5 && posNum <= 9) schoolStats[schoolId].points += 1;
-      
+      else if (posNum >= 5 && posNum <= 10) schoolStats[schoolId].points += 1;
+
       if (posNum >= 1 && posNum <= 6) {
         schoolStats[schoolId].places[posNum] += 1;
       }
@@ -1626,7 +1756,7 @@ function renderGeneralStandings() {
     for (let p = 1; p <= 6; p++) {
       if (b.places[p] !== a.places[p]) return b.places[p] - a.places[p];
     }
-    return a.name.localeCompare(b.name); 
+    return a.name.localeCompare(b.name);
   });
 
   if (sortedSchools.length === 0) {
@@ -1640,7 +1770,7 @@ function renderGeneralStandings() {
     if (index === 0 && s.points > 0) { medal = '🏆 '; extraStyle = 'font-size:1.1rem; color:var(--primary);'; }
     else if (index === 1 && s.points > 0) { medal = '🥈 '; }
     else if (index === 2 && s.points > 0) { medal = '🥉 '; }
-    
+
     return `<tr>
       <td style="font-weight:bold; text-align:center; ${extraStyle}">${index + 1}º</td>
       <td style="${extraStyle}">${medal}${escapeHTML(s.name)}</td>
